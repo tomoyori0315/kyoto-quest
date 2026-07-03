@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>京都クエスト Sprite Lab</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#18140f;color:#efe7d4;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+  main{display:grid;grid-template-columns:minmax(240px,420px) 1fr;gap:14px;padding:14px;min-height:100vh}
+  .stage-wrap,.panel{background:#241e17;border:1px solid #5d4a32;border-radius:8px;padding:10px}
+  .stage{position:relative;width:min(100%,360px);aspect-ratio:180/320;margin:auto;overflow:hidden;background:#000;border:2px solid #80603a}
+  #bg{position:absolute;left:0;top:0;width:100%;height:auto;image-rendering:pixelated}
+  #sprite{position:absolute;image-rendering:pixelated;transform-origin:50% 100%;pointer-events:none}
+  .anchor{position:absolute;width:11px;height:11px;margin:-5px 0 0 -5px;pointer-events:none}
+  .anchor::before,.anchor::after{content:"";position:absolute;background:#ff2c2c}
+  .anchor::before{left:5px;top:0;width:1px;height:11px}
+  .anchor::after{left:0;top:5px;width:11px;height:1px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  button,select,label{font:inherit}
+  button,select{background:#eadbbd;color:#2a2018;border:1px solid #9c7a47;border-radius:6px;padding:7px 9px}
+  button.active{background:#c4402a;color:#fff;border-color:#e19a55}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:9px 0}
+  .hint{font-size:12px;line-height:1.5;color:#cdbb98}
+  .sheet-box{overflow:auto;background:#120f0b;border:1px solid #5d4a32;border-radius:6px;max-height:58vh}
+  canvas{display:block;image-rendering:pixelated}
+  .readout{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#bfe8a4}
+  input{width:82px;background:#eadbbd;color:#2a2018;border:1px solid #9c7a47;border-radius:6px;padding:7px 8px}
+  textarea{width:100%;min-height:150px;background:#120f0b;color:#bfe8a4;border:1px solid #5d4a32;border-radius:6px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  @media(max-width:760px){main{grid-template-columns:1fr}.sheet-box{max-height:42vh}}
+</style>
+</head>
+<body>
+<main>
+  <section class="stage-wrap">
+    <div class="stage" id="stage">
+      <img id="bg" src="assets/bg/sando.png" alt="">
+      <img id="sprite" alt="">
+      <div class="anchor" id="anchor"></div>
+    </div>
+    <p class="hint">赤い十字が足元アンカー。背景はsandoを180x380基準で表示し、中央付近だけを切り出しています。</p>
+  </section>
+
+  <section class="panel">
+    <h1>Sprite Lab</h1>
+    <div class="row">
+      <label>Sheet
+        <select id="sheet">
+          <option value="idle4">player-idle-4dir.png</option>
+          <option value="sideRight">player-walk-side-right.png</option>
+          <option value="walkDown">player-walk-down.png</option>
+          <option value="walkUp">player-walk-up.png</option>
+          <option value="walk">player-walk-sheet.png</option>
+          <option value="static">player-sheet.png</option>
+          <option value="catOrange">cat-orange-tabby-sheet.png</option>
+          <option value="catBlack">cat-black-bandana-sheet.png</option>
+          <option value="catCalico">cat-calico-bandana-sheet.png</option>
+          <option value="catHondenHachiware">cat-honden-hachiware-sheet.png</option>
+          <option value="catSenbonKijishiro">cat-senbon-kijishiro-sheet.png</option>
+          <optgroup label="NPC" id="npcSheetOptions"></optgroup>
+        </select>
+      </label>
+      <button id="play">再生</button>
+      <button id="mode">walking</button>
+      <button id="swap">left/right入替 OFF</button>
+      <button id="mirror">左右反転 OFF</button>
+    </div>
+
+    <div class="row grid" id="dirs">
+      <button data-dir="down" class="active">down</button>
+      <button data-dir="up">up</button>
+      <button data-dir="left">left</button>
+      <button data-dir="right">right</button>
+    </div>
+    <div class="row grid" id="poses">
+      <button data-pose="poseA" class="active">poseA</button>
+      <button data-pose="poseB">poseB</button>
+      <button data-pose="poseC">poseC</button>
+    </div>
+
+    <div class="row">
+      <label>draw height
+        <select id="height">
+          <option>14</option>
+          <option>16</option>
+          <option>18</option>
+          <option>20</option>
+          <option>24</option>
+          <option>28</option>
+          <option selected>30</option>
+          <option>34</option>
+          <option>38</option>
+        </select>
+      </label>
+      <label>anchor X
+        <select id="anchorX">
+          <option>80</option><option selected>90</option><option>100</option>
+        </select>
+      </label>
+      <label>anchor Y
+        <select id="anchorY">
+          <option>220</option><option selected>240</option><option>260</option><option>280</option>
+        </select>
+      </label>
+    </div>
+
+    <h2>Manual Crop</h2>
+    <div class="row">
+      <label>crop X <input id="cropX" type="number" step="1"></label>
+      <label>crop Y <input id="cropY" type="number" step="1"></label>
+      <label>cell W <input id="cellW" type="number" step="1"></label>
+      <label>cell H <input id="cellH" type="number" step="1"></label>
+    </div>
+    <div class="row">
+      <label>offset X <input id="offsetX" type="number" step="1" value="0"></label>
+      <label>offset Y <input id="offsetY" type="number" step="1" value="0"></label>
+      <button id="resetCrop">grid既定値に戻す</button>
+    </div>
+    <h2>Direction Offsets</h2>
+    <div class="row">
+      <label>down offset X <input id="downOffsetX" type="number" step="1" value="0"></label>
+      <label>down offset Y <input id="downOffsetY" type="number" step="1" value="0"></label>
+      <label>up offset X <input id="upOffsetX" type="number" step="1" value="0"></label>
+      <label>up offset Y <input id="upOffsetY" type="number" step="1" value="0"></label>
+    </div>
+    <div class="row">
+      <label>left offset X <input id="leftOffsetX" type="number" step="1" value="0"></label>
+      <label>left offset Y <input id="leftOffsetY" type="number" step="1" value="0"></label>
+      <label>right offset X <input id="rightOffsetX" type="number" step="1" value="0"></label>
+      <label>right offset Y <input id="rightOffsetY" type="number" step="1" value="0"></label>
+    </div>
+    <h2>Frame Offsets</h2>
+    <div class="row">
+      <label id="stepAOffsetXLabel">stepA offset X <input id="stepAOffsetX" type="number" step="1" value="0"></label>
+      <label id="stepAOffsetYLabel">stepA offset Y <input id="stepAOffsetY" type="number" step="1" value="0"></label>
+      <label id="idleOffsetXLabel">idle offset X <input id="idleOffsetX" type="number" step="1" value="0"></label>
+      <label id="idleOffsetYLabel">idle offset Y <input id="idleOffsetY" type="number" step="1" value="0"></label>
+    </div>
+    <div class="row">
+      <label id="stepBOffsetXLabel">stepB offset X <input id="stepBOffsetX" type="number" step="1" value="0"></label>
+      <label id="stepBOffsetYLabel">stepB offset Y <input id="stepBOffsetY" type="number" step="1" value="0"></label>
+    </div>
+
+    <div class="row readout" id="readout"></div>
+    <div class="row readout" id="missing"></div>
+    <h2>Config JSON</h2>
+    <textarea id="config" readonly></textarea>
+    <h2>Sheet Preview</h2>
+    <p class="hint">青線が切り出しセル。idle4は4列x1行、横/上下歩行・猫・NPCは3列x1行、walkは4列x3行、staticは2列x2行として表示します。</p>
+    <div class="sheet-box"><canvas id="preview"></canvas></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const NPC_SHEETS=[
+  {id:"npcGuide",label:"npc-guide-oldman-sheet.png",src:"assets/sprites/npcs/npc-guide-oldman-sheet.png",cols:3,rows:1,mode:"npc"},
+  {id:"npcStudent",label:"npc-student-sheet.png",src:"assets/sprites/npcs/npc-student-sheet.png",cols:3,rows:1,mode:"npc"},
+  {id:"npcChaya",label:"npc-chaya-woman-sheet.png",src:"assets/sprites/npcs/npc-chaya-woman-sheet.png",cols:3,rows:1,mode:"npc"},
+  {id:"npcTourist",label:"npc-tourist-sheet.png",src:"assets/sprites/npcs/npc-tourist-sheet.png",cols:3,rows:1,mode:"npc"},
+  {id:"npcShrineCleaner",label:"npc-shrine-cleaner-sheet.png",src:"assets/sprites/npcs/npc-shrine-cleaner-sheet.png",cols:3,rows:1,mode:"npc"}
+];
+const sheets={
+  idle4:{src:"assets/sprites/player-idle-4dir.png",cols:4,rows:1,dirs:["down","up","left","right"],idleRow:0,walkRows:[0]},
+  sideRight:{src:"assets/sprites/player-walk-side-right.png",cols:3,rows:1,dirs:["right"],idleCol:1,walkCols:[0,1,2,1]},
+  walkDown:{src:"assets/sprites/player-walk-down.png",cols:3,rows:1,dirs:["down"],idleCol:1,walkCols:[0,1,2,1]},
+  walkUp:{src:"assets/sprites/player-walk-up.png",cols:3,rows:1,dirs:["up"],idleCol:1,walkCols:[0,1,2,1]},
+  walk:{src:"assets/sprites/player-walk-sheet.png",cols:4,rows:3,dirs:["down","up","left","right"],idleRow:1,walkRows:[0,1,2,1]},
+  static:{src:"assets/sprites/player-sheet.png",cols:2,rows:2,dirs:["down","up","left","right"],cells:{down:[0,0],up:[1,0],left:[0,1],right:[1,1]},idleRow:0,walkRows:[0]},
+  catOrange:{src:"assets/sprites/cats/cat-orange-tabby-sheet.png",cols:3,rows:1,poses:["poseA","poseB","poseC"],poseLoop:["poseA","poseB","poseC","poseB"],usesFrameOffsets:true},
+  catBlack:{src:"assets/sprites/cats/cat-black-bandana-sheet.png",cols:3,rows:1,poses:["poseA","poseB","poseC"],poseLoop:["poseA","poseB","poseC","poseB"],usesFrameOffsets:true},
+  catCalico:{src:"assets/sprites/cats/cat-calico-bandana-sheet.png",cols:3,rows:1,poses:["poseA","poseB","poseC"],poseLoop:["poseA","poseB","poseC","poseB"],usesFrameOffsets:true},
+  catHondenHachiware:{src:"assets/sprites/cats/cat-honden-hachiware-sheet.png",cols:3,rows:1,poses:["poseA","poseB","poseC"],poseLoop:["poseA","poseB","poseC","poseB"],usesFrameOffsets:true},
+  catSenbonKijishiro:{src:"assets/sprites/cats/cat-senbon-kijishiro-sheet.png",cols:3,rows:1,poses:["poseA","poseB","poseC"],poseLoop:["poseA","poseB","poseC","poseB"],usesFrameOffsets:true}
+};
+for(const npc of NPC_SHEETS){
+  sheets[npc.id]={src:npc.src,cols:npc.cols,rows:npc.rows,mode:npc.mode,poses:["poseA","poseB","poseC"],poseLoop:["poseA","poseB","poseC","poseB"],usesFrameOffsets:true};
+}
+const state={sheet:"idle4",dir:"down",pose:"poseA",playing:false,walking:false,swapLR:false,mirrorX:false,frame:0};
+const imgs={};
+const els={
+  stage:document.getElementById("stage"),bg:document.getElementById("bg"),sprite:document.getElementById("sprite"),
+  anchor:document.getElementById("anchor"),sheet:document.getElementById("sheet"),play:document.getElementById("play"),
+  mode:document.getElementById("mode"),swap:document.getElementById("swap"),height:document.getElementById("height"),
+  mirror:document.getElementById("mirror"),
+  anchorX:document.getElementById("anchorX"),anchorY:document.getElementById("anchorY"),preview:document.getElementById("preview"),
+  readout:document.getElementById("readout"),missing:document.getElementById("missing"),cropX:document.getElementById("cropX"),cropY:document.getElementById("cropY"),
+  cellW:document.getElementById("cellW"),cellH:document.getElementById("cellH"),offsetX:document.getElementById("offsetX"),
+  offsetY:document.getElementById("offsetY"),resetCrop:document.getElementById("resetCrop"),config:document.getElementById("config"),
+  downOffsetX:document.getElementById("downOffsetX"),downOffsetY:document.getElementById("downOffsetY"),
+  upOffsetX:document.getElementById("upOffsetX"),upOffsetY:document.getElementById("upOffsetY"),
+  leftOffsetX:document.getElementById("leftOffsetX"),leftOffsetY:document.getElementById("leftOffsetY"),
+  rightOffsetX:document.getElementById("rightOffsetX"),rightOffsetY:document.getElementById("rightOffsetY"),
+  stepAOffsetX:document.getElementById("stepAOffsetX"),stepAOffsetY:document.getElementById("stepAOffsetY"),
+  idleOffsetX:document.getElementById("idleOffsetX"),idleOffsetY:document.getElementById("idleOffsetY"),
+  stepBOffsetX:document.getElementById("stepBOffsetX"),stepBOffsetY:document.getElementById("stepBOffsetY"),
+  stepAOffsetXLabel:document.getElementById("stepAOffsetXLabel"),stepAOffsetYLabel:document.getElementById("stepAOffsetYLabel"),
+  idleOffsetXLabel:document.getElementById("idleOffsetXLabel"),idleOffsetYLabel:document.getElementById("idleOffsetYLabel"),
+  stepBOffsetXLabel:document.getElementById("stepBOffsetXLabel"),stepBOffsetYLabel:document.getElementById("stepBOffsetYLabel")
+};
+function populateNpcSheetOptions(){
+  const group=document.getElementById("npcSheetOptions");
+  group.innerHTML="";
+  for(const npc of NPC_SHEETS){
+    const opt=document.createElement("option");
+    opt.value=npc.id;opt.textContent=npc.label;
+    group.appendChild(opt);
+  }
+}
+function loadImage(src){
+  if(imgs[src])return imgs[src];
+  const img=new Image();imgs[src]=img;
+  img.onload=()=>{img.failed=false;setDefaultCrop();renderPreview();renderSprite();};
+  img.onerror=()=>{img.failed=true;renderPreview();renderSprite();};
+  img.src=src;
+  return img;
+}
+function imageMissing(img){return img.failed||img.complete&&!img.naturalWidth;}
+function cropValues(){
+  const s=sheets[state.sheet],img=loadImage(s.src);
+  return {
+    cropX:Number(els.cropX.value)||0,
+    cropY:Number(els.cropY.value)||0,
+    cellW:Number(els.cellW.value)||Math.round((img.naturalWidth||0)/s.cols),
+    cellH:Number(els.cellH.value)||Math.round((img.naturalHeight||0)/s.rows),
+    offsetX:Number(els.offsetX.value)||0,
+    offsetY:Number(els.offsetY.value)||0
+  };
+}
+function directionOffsets(){
+  return {
+    down:{x:Number(els.downOffsetX.value)||0,y:Number(els.downOffsetY.value)||0},
+    up:{x:Number(els.upOffsetX.value)||0,y:Number(els.upOffsetY.value)||0},
+    left:{x:Number(els.leftOffsetX.value)||0,y:Number(els.leftOffsetY.value)||0},
+    right:{x:Number(els.rightOffsetX.value)||0,y:Number(els.rightOffsetY.value)||0}
+  };
+}
+function setLabelText(label,text){
+  label.firstChild.nodeValue=text+" ";
+}
+function updateFrameOffsetLabels(){
+  const s=sheets[state.sheet],poseLabels=s.poses&&s.usesFrameOffsets;
+  setLabelText(els.stepAOffsetXLabel,poseLabels?"poseA offset X":"stepA offset X");
+  setLabelText(els.stepAOffsetYLabel,poseLabels?"poseA offset Y":"stepA offset Y");
+  setLabelText(els.idleOffsetXLabel,poseLabels?"poseB offset X":"idle offset X");
+  setLabelText(els.idleOffsetYLabel,poseLabels?"poseB offset Y":"idle offset Y");
+  setLabelText(els.stepBOffsetXLabel,poseLabels?"poseC offset X":"stepB offset X");
+  setLabelText(els.stepBOffsetYLabel,poseLabels?"poseC offset Y":"stepB offset Y");
+}
+function frameOffsets(){
+  if(sheets[state.sheet].usesFrameOffsets){
+    return {
+      poseA:{x:Number(els.stepAOffsetX.value)||0,y:Number(els.stepAOffsetY.value)||0},
+      poseB:{x:Number(els.idleOffsetX.value)||0,y:Number(els.idleOffsetY.value)||0},
+      poseC:{x:Number(els.stepBOffsetX.value)||0,y:Number(els.stepBOffsetY.value)||0}
+    };
+  }
+  return {
+    stepA:{x:Number(els.stepAOffsetX.value)||0,y:Number(els.stepAOffsetY.value)||0},
+    idle:{x:Number(els.idleOffsetX.value)||0,y:Number(els.idleOffsetY.value)||0},
+    stepB:{x:Number(els.stepBOffsetX.value)||0,y:Number(els.stepBOffsetY.value)||0}
+  };
+}
+function setDefaultCrop(force=false){
+  const s=sheets[state.sheet],img=loadImage(s.src);
+  if(!img.complete||!img.naturalWidth)return;
+  if(force||!els.cellW.value){
+    els.cropX.value=0;els.cropY.value=0;
+    els.cellW.value=Math.round(img.naturalWidth/s.cols);
+    els.cellH.value=Math.round(img.naturalHeight/s.rows);
+  }
+}
+function effectiveDir(){
+  if(!state.swapLR)return state.dir;
+  if(state.dir==="left")return "right";
+  if(state.dir==="right")return "left";
+  return state.dir;
+}
+function currentCell(){
+  const s=sheets[state.sheet],dir=effectiveDir();
+  if(s.poses){
+    const pose=(s.poseLoop&&state.playing)?s.poseLoop[state.frame%s.poseLoop.length]:state.pose;
+    return [Math.max(0,s.poses.indexOf(pose)),0];
+  }
+  if(s.cells)return s.cells[dir];
+  if(s.walkCols){
+    const col=state.walking?(state.playing?s.walkCols[state.frame%s.walkCols.length]:s.idleCol):s.idleCol;
+    return [col,0];
+  }
+  const col=s.dirs.indexOf(dir);
+  const row=state.walking?(state.playing?s.walkRows[state.frame%s.walkRows.length]:s.idleRow):s.idleRow;
+  return [col,row];
+}
+function currentFrameName(){
+  const s=sheets[state.sheet];
+  if(s.poses)return (s.poseLoop&&state.playing)?s.poseLoop[state.frame%s.poseLoop.length]:state.pose;
+  if(!s.walkCols)return "idle";
+  const [col]=currentCell();
+  if(col===0)return "stepA";
+  if(col===2)return "stepB";
+  return "idle";
+}
+function frameCanvas(){
+  const s=sheets[state.sheet],img=loadImage(s.src);
+  if(imageMissing(img))return null;
+  if(!img.complete||!img.naturalWidth)return null;
+  const [col,row]=currentCell(),cv=cropValues();
+  const sx=cv.cropX+col*cv.cellW,sy=cv.cropY+row*cv.cellH;
+  const c=document.createElement("canvas"),g=c.getContext("2d");
+  c.width=Math.round(cv.cellW);c.height=Math.round(cv.cellH);
+  g.drawImage(img,sx,sy,cv.cellW,cv.cellH,0,0,c.width,c.height);
+  try{
+    const data=g.getImageData(0,0,c.width,c.height),p=data.data;
+    for(let i=0;i<p.length;i+=4){if(p[i]>232&&p[i+1]>212&&p[i+2]>175)p[i+3]=0;}
+    g.putImageData(data,0,0);
+  }catch(_){}
+  return c;
+}
+function renderSprite(){
+  const s=sheets[state.sheet],img=loadImage(s.src),c=frameCanvas();
+  if(!c){
+    if(imageMissing(img)){
+      els.sprite.removeAttribute("src");
+      els.sprite.style.width="0px";els.sprite.style.height="0px";
+      els.missing.textContent=`画像が見つかりません: ${s.src}`;
+      els.config.value=JSON.stringify({sheet:s.src.split("/").pop(),cols:s.cols,rows:s.rows,error:"image not found"},null,2);
+    }
+    return;
+  }
+  els.missing.textContent="";
+  const h=Number(els.height.value),w=c.width/c.height*h;
+  const ax=Number(els.anchorX.value),ay=Number(els.anchorY.value),cv=cropValues(),offsets=directionOffsets();
+  const dirOffset=s.poses?{x:0,y:0}:offsets[effectiveDir()];
+  const perFrameOffsets=frameOffsets(),frameOffset=s.usesFrameOffsets?(perFrameOffsets[currentFrameName()]||{x:0,y:0}):(!s.poses?perFrameOffsets[currentFrameName()]||{x:0,y:0}:{x:0,y:0});
+  const scale=els.stage.clientWidth/180;
+  els.sprite.src=c.toDataURL();
+  els.sprite.style.width=w*scale+"px";
+  els.sprite.style.height=h*scale+"px";
+  els.sprite.style.left=(ax-w/2+cv.offsetX+dirOffset.x+frameOffset.x)*scale+"px";
+  els.sprite.style.top=(ay-h+cv.offsetY+dirOffset.y+frameOffset.y)*scale+"px";
+  els.sprite.style.transform=state.mirrorX?"scaleX(-1)":"scaleX(1)";
+  els.anchor.style.left=ax*scale+"px";
+  els.anchor.style.top=ay*scale+"px";
+  els.bg.style.width=180*scale+"px";
+  els.bg.style.height=380*scale+"px";
+  els.bg.style.top=-60*scale+"px";
+  els.readout.textContent=`sheet=${state.sheet} dir=${state.dir} pose=${state.pose} effective=${effectiveDir()} cell=${currentCell().join(",")} frame=${currentFrameName()} draw=${Math.round(w)}x${h} anchor=${ax},${ay} offset=${cv.offsetX},${cv.offsetY} dirOffset=${dirOffset.x},${dirOffset.y} frameOffset=${frameOffset.x},${frameOffset.y}`;
+  const config={
+    sheet:s.src.split("/").pop(),
+    cols:s.cols,
+    rows:s.rows,
+    cropX:cv.cropX,
+    cropY:cv.cropY,
+    cellW:cv.cellW,
+    cellH:cv.cellH,
+    drawH:h,
+    commonOffsetX:cv.offsetX,
+    commonOffsetY:cv.offsetY
+  };
+  if(s.poses&&!s.usesFrameOffsets){
+    config.pose=state.pose;
+  }else if(s.usesFrameOffsets){
+    config.pose=currentFrameName();
+    config.frameOffsets=perFrameOffsets;
+  }else{
+    Object.assign(config,{
+    swapLR:state.swapLR,
+    mirrorX:state.mirrorX,
+    offsets,
+    frameOffsets:perFrameOffsets
+    });
+  }
+  els.config.value=JSON.stringify(config,null,2);
+}
+function renderPreview(){
+  const s=sheets[state.sheet],img=loadImage(s.src),c=els.preview,g=c.getContext("2d");
+  if(imageMissing(img)){
+    c.width=420;c.height=120;
+    g.fillStyle="#120f0b";g.fillRect(0,0,c.width,c.height);
+    g.fillStyle="#f0d08a";g.font="18px sans-serif";g.fillText("画像が見つかりません",20,45);
+    g.fillStyle="#cdbb98";g.font="12px monospace";g.fillText(s.src,20,72);
+    els.missing.textContent=`画像が見つかりません: ${s.src}`;
+    return;
+  }
+  if(!img.complete||!img.naturalWidth)return;
+  els.missing.textContent="";
+  c.width=img.naturalWidth;c.height=img.naturalHeight;
+  g.drawImage(img,0,0);
+  const cv=cropValues();
+  g.strokeStyle="#28a8ff";g.lineWidth=4;
+  for(let x=0;x<=s.cols;x++){const px=cv.cropX+x*cv.cellW;g.beginPath();g.moveTo(px,cv.cropY);g.lineTo(px,cv.cropY+s.rows*cv.cellH);g.stroke();}
+  for(let y=0;y<=s.rows;y++){const py=cv.cropY+y*cv.cellH;g.beginPath();g.moveTo(cv.cropX,py);g.lineTo(cv.cropX+s.cols*cv.cellW,py);g.stroke();}
+  g.strokeStyle="#ff3030";g.lineWidth=3;
+  const [col,row]=currentCell();
+  g.strokeRect(cv.cropX+col*cv.cellW,cv.cropY+row*cv.cellH,cv.cellW,cv.cellH);
+}
+function setActiveDir(){
+  document.querySelectorAll("#dirs button").forEach(b=>b.classList.toggle("active",b.dataset.dir===state.dir));
+}
+function setActivePose(){
+  document.querySelectorAll("#poses button").forEach(b=>b.classList.toggle("active",b.dataset.pose===state.pose));
+}
+document.getElementById("dirs").addEventListener("click",e=>{
+  if(e.target.dataset.dir){state.dir=e.target.dataset.dir;setActiveDir();renderSprite();}
+});
+document.getElementById("poses").addEventListener("click",e=>{
+  if(e.target.dataset.pose){state.pose=e.target.dataset.pose;setActivePose();renderPreview();renderSprite();}
+});
+els.sheet.onchange=()=>{
+  state.sheet=els.sheet.value;state.frame=0;
+  if(state.sheet==="sideRight"){state.dir="right";setActiveDir();}
+  if(state.sheet==="walkDown"){state.dir="down";setActiveDir();}
+  if(state.sheet==="walkUp"){state.dir="up";setActiveDir();}
+  if(sheets[state.sheet].poses){state.pose="poseA";setActivePose();}
+  updateFrameOffsetLabels();
+  loadImage(sheets[state.sheet].src);setDefaultCrop(true);renderPreview();renderSprite();
+};
+els.play.onclick=()=>{state.playing=!state.playing;els.play.classList.toggle("active",state.playing);els.play.textContent=state.playing?"停止":"再生";renderSprite();};
+els.mode.onclick=()=>{state.walking=!state.walking;els.mode.classList.toggle("active",state.walking);els.mode.textContent=state.walking?"walking":"idle only";state.frame=0;renderSprite();};
+els.swap.onclick=()=>{state.swapLR=!state.swapLR;els.swap.classList.toggle("active",state.swapLR);els.swap.textContent=`left/right入替 ${state.swapLR?"ON":"OFF"}`;renderSprite();};
+els.mirror.onclick=()=>{state.mirrorX=!state.mirrorX;els.mirror.classList.toggle("active",state.mirrorX);els.mirror.textContent=`左右反転 ${state.mirrorX?"ON":"OFF"}`;renderSprite();};
+els.height.onchange=els.anchorX.onchange=els.anchorY.onchange=renderSprite;
+for(const id of ["cropX","cropY","cellW","cellH","offsetX","offsetY","downOffsetX","downOffsetY","upOffsetX","upOffsetY","leftOffsetX","leftOffsetY","rightOffsetX","rightOffsetY","stepAOffsetX","stepAOffsetY","idleOffsetX","idleOffsetY","stepBOffsetX","stepBOffsetY"]){
+  els[id].addEventListener("input",()=>{renderPreview();renderSprite();});
+}
+els.resetCrop.onclick=()=>{setDefaultCrop(true);renderPreview();renderSprite();};
+setInterval(()=>{if(state.playing){state.frame++;renderSprite();}},220);
+populateNpcSheetOptions();
+loadImage(sheets.idle4.src);loadImage(sheets.sideRight.src);loadImage(sheets.walkDown.src);loadImage(sheets.walkUp.src);loadImage(sheets.walk.src);loadImage(sheets.static.src);
+loadImage(sheets.catOrange.src);loadImage(sheets.catBlack.src);loadImage(sheets.catCalico.src);loadImage(sheets.catHondenHachiware.src);loadImage(sheets.catSenbonKijishiro.src);
+for(const npc of NPC_SHEETS)loadImage(sheets[npc.id].src);
+updateFrameOffsetLabels();
+setDefaultCrop();renderSprite();
+</script>
+</body>
+</html>

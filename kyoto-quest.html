@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>京都クエスト 〜伏見稲荷〜</title>
+<style>
+  :root{
+    --vermillion:#c4402a; --vermillion-d:#8a2818;
+    --wood:#7a4b2a; --wood-d:#5a3418;
+    --washi:#f0e6cf; --washi-d:#e0d2b0;
+    --ink:#2a2018; --gold:#d9a93a; --ui-line:#caa35f;
+    --app-height:100vh; --dpad-size:132px; --dpad-cell:44px;
+    --dpad-idle-opacity:.56; --dpad-active-opacity:.92;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+  html,body{height:100%;overflow:hidden;background:#1a140e;}
+  body{display:flex;align-items:center;justify-content:center;
+    font-family:'Hiragino Maru Gothic ProN','Yu Gothic','YuGothic','Meiryo',sans-serif;
+    background:radial-gradient(circle at 30% 20%,#241a12 0%,#14100b 80%);touch-action:none;}
+  #wrap{position:relative;width:100vw;height:var(--app-height);
+    max-width:min(100vw,calc(var(--app-height)*0.5625));max-height:min(var(--app-height),calc(100vw*1.7778));
+    aspect-ratio:9/16;background:#000;
+    box-shadow:0 0 0 3px var(--wood-d),0 0 40px rgba(0,0,0,.7);overflow:hidden;
+    touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;
+    image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;
+    -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;}
+
+  .panel{background:linear-gradient(180deg,var(--washi) 0%,var(--washi-d) 100%);
+    border:2px solid var(--ui-line);border-radius:8px;
+    box-shadow:0 2px 0 rgba(90,52,24,.5),inset 0 1px 0 rgba(255,255,255,.4);color:var(--ink);}
+  #hud-top{position:absolute;top:0;left:0;right:0;
+    padding:calc(env(safe-area-inset-top) + 8px) 8px 0;display:flex;gap:6px;align-items:flex-start;
+    pointer-events:none;z-index:20;}
+  #hud-left{flex:1;min-width:0;max-width:calc(100% - 132px);display:flex;flex-direction:column;gap:5px;}
+  #hud-actions{display:flex;gap:6px;align-items:flex-start;flex:none;}
+  #area-name{flex:1;display:flex;align-items:center;gap:7px;padding:7px 10px;
+    font-weight:700;font-size:clamp(12px,3.5vw,16px);line-height:1.25;letter-spacing:.04em;pointer-events:auto;}
+  #area-name,#title-name{
+    touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;cursor:default;
+  }
+  #area-name .torii{width:18px;height:16px;flex:none;}
+  #cat-count{padding:7px 9px;font-weight:700;font-size:clamp(12px,3.6vw,16px);
+    display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  #book-btn{width:clamp(40px,11vw,52px);height:clamp(40px,11vw,52px);padding:5px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    pointer-events:auto;cursor:pointer;flex:none;}
+  #book-btn .ico{font-size:clamp(17px,4.8vw,21px);line-height:1;display:inline-flex;align-items:center;justify-content:center;width:1.25em;height:1.1em;margin:0 auto -1px;}
+  #book-btn .lbl{font-size:9px;font-weight:700;line-height:1;}
+  #book-btn:active{transform:translateY(1px);}
+  #debug-btn{width:clamp(36px,9vw,44px);height:clamp(28px,8vw,36px);padding:3px;
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;cursor:pointer;flex:none;font-size:10px;font-weight:700;letter-spacing:.03em;}
+  #debug-btn.hidden{display:none;}
+  #debug-btn.active{background:linear-gradient(180deg,#2f3b2f,#1b241b);color:#92ff92;border-color:#5eda5e;}
+  #debug-btn:active{transform:translateY(1px);}
+  #quest-bar{padding:6px 10px;font-size:clamp(10px,3vw,13px);line-height:1.38;color:var(--ink);
+    pointer-events:none;display:flex;gap:6px;align-items:flex-start;}
+  #quest-bar .q-ico{flex:none;font-size:14px;}
+  #quest-bar b{color:var(--vermillion-d);}
+
+  #controls{position:absolute;left:0;right:0;bottom:0;
+    padding:0 10px calc(env(safe-area-inset-bottom) + 12px);
+    display:flex;justify-content:space-between;align-items:flex-end;z-index:20;pointer-events:none;}
+  #dpad{position:relative;width:var(--dpad-size);height:var(--dpad-size);pointer-events:auto;flex:none;touch-action:none;
+    opacity:var(--dpad-idle-opacity);transition:opacity .12s ease,filter .12s ease;filter:drop-shadow(0 2px 4px rgba(0,0,0,.22));}
+  #dpad.stick-hidden{display:none;}
+  #dpad.is-active{opacity:var(--dpad-active-opacity);filter:drop-shadow(0 3px 7px rgba(0,0,0,.36));}
+  .dbtn{position:absolute;width:var(--dpad-cell);height:var(--dpad-cell);background:linear-gradient(180deg,#f3ead4,#dcc9a4);
+    border:2px solid var(--ui-line);color:var(--wood-d);display:flex;align-items:center;justify-content:center;
+    font-size:18px;box-shadow:0 2px 0 rgba(90,52,24,.5);backdrop-filter:blur(2px);}
+  .dbtn:active,.dbtn.is-pressed{transform:translateY(1px);box-shadow:0 1px 0 rgba(90,52,24,.5);
+    background:linear-gradient(180deg,#fff4d4,#d9a93a);border-color:#e0b24a;color:#5a3418;}
+  #d-up{top:0;left:var(--dpad-cell);border-radius:10px 10px 4px 4px;}
+  #d-down{bottom:0;left:var(--dpad-cell);border-radius:4px 4px 10px 10px;}
+  #d-left{top:var(--dpad-cell);left:0;border-radius:10px 4px 4px 10px;}
+  #d-right{top:var(--dpad-cell);right:0;border-radius:4px 10px 10px 4px;}
+  #d-center{top:var(--dpad-cell);left:var(--dpad-cell);width:var(--dpad-cell);height:var(--dpad-cell);
+    background:radial-gradient(circle,#e8d8b4,#cdb888);border:2px solid var(--ui-line);}
+  #controls.stick-mode{justify-content:flex-end;}
+  #virtual-stick{position:absolute;left:0;top:0;width:112px;height:112px;z-index:22;display:none;pointer-events:none;
+    transform:translate(-50%,-50%);opacity:.92;filter:drop-shadow(0 3px 8px rgba(0,0,0,.36));
+    touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
+  #virtual-stick.is-active{display:block;}
+  #stick-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(202,163,95,.75);
+    background:rgba(240,230,207,.24);box-shadow:inset 0 1px 0 rgba(255,255,255,.28);backdrop-filter:blur(2px);
+    touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+  #stick-knob{position:absolute;left:50%;top:50%;width:42px;height:42px;border-radius:50%;transform:translate(-50%,-50%);
+    border:2px solid rgba(202,163,95,.9);background:linear-gradient(180deg,rgba(243,234,212,.9),rgba(216,195,156,.86));
+    box-shadow:0 2px 0 rgba(90,52,24,.45);
+    touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+  #act-cluster{display:flex;gap:9px;align-items:flex-end;pointer-events:auto;padding-bottom:6px;margin-left:auto;}
+  .act{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
+  .act .circle{width:clamp(48px,13vw,58px);height:clamp(48px,13vw,58px);border-radius:50%;
+    background:linear-gradient(180deg,#f3ead4,#d8c39c);border:3px solid var(--ui-line);
+    display:flex;align-items:center;justify-content:center;font-size:clamp(20px,6vw,26px);
+    box-shadow:0 3px 0 rgba(90,52,24,.5),inset 0 1px 0 rgba(255,255,255,.5);position:relative;}
+  .act .lbl{font-size:10px;font-weight:700;color:var(--washi);text-shadow:0 1px 2px rgba(0,0,0,.8);}
+  .act:active .circle{transform:translateY(2px);box-shadow:0 1px 0 rgba(90,52,24,.5);}
+  .act.primary .circle{background:linear-gradient(180deg,#e9694a,#c4402a);border-color:#e9a060;}
+  .act.primary .lbl{color:#fff;}
+  .act.disabled{opacity:.4;pointer-events:none;}
+
+  #dialog{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:30;display:none;}
+  #dialog.show{display:block;animation:slideUp .18s ease-out;}
+  @keyframes slideUp{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  #dialog .box{background:linear-gradient(180deg,#fbf4e2,#efe1c2);border:3px solid var(--wood);
+    border-radius:12px;box-shadow:0 4px 0 var(--wood-d),0 6px 16px rgba(0,0,0,.5);padding:14px 16px 16px;position:relative;}
+  #dialog .speaker{position:absolute;top:-14px;left:14px;background:var(--vermillion);color:#fff;
+    font-weight:700;font-size:13px;padding:3px 13px;border-radius:7px;border:2px solid #e9a060;
+    box-shadow:0 2px 0 var(--vermillion-d);}
+  #dialog .speaker.cat{background:var(--gold);border-color:#f0d27a;color:#3a2a10;box-shadow:0 2px 0 #a87c1e;}
+  #dialog .dialog-layout{display:block;}
+  #dialog.cat-mode .dialog-layout{display:flex;gap:10px;align-items:stretch;}
+  #dialog .dialog-text{min-width:0;position:relative;padding-bottom:12px;}
+  #dialog.cat-mode .dialog-text{flex:1;}
+  #dialog .cat-portrait{display:none;flex:0 0 clamp(86px,26vw,100px);align-items:center;justify-content:center;}
+  #dialog.cat-mode .cat-portrait{display:flex;}
+  #dialog .cat-closeup{display:block;width:100%;max-height:112px;height:auto;object-fit:contain;
+    border:2px solid var(--ui-line);border-radius:10px;background:#f8efd9;box-shadow:0 2px 0 rgba(90,52,24,.3);}
+  #dialog .text{color:var(--ink);font-size:clamp(14px,4vw,17px);line-height:1.65;min-height:3.3em;
+    margin-top:6px;white-space:pre-wrap;font-weight:500;}
+  #dialog .more-tag{display:inline-block;margin-top:6px;font-size:12px;color:var(--vermillion-d);
+    font-weight:700;text-decoration:underline;cursor:pointer;}
+  #dialog .next{position:absolute;right:14px;bottom:10px;color:var(--vermillion);font-size:18px;animation:bob .8s infinite;}
+  #dialog.cat-mode .next{right:auto;left:16px;bottom:8px;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(3px);}}
+  #dialog .learn{margin-top:8px;padding:8px 10px;background:rgba(217,169,58,.18);
+    border-left:3px solid var(--gold);border-radius:5px;font-size:13px;line-height:1.55;color:#5a4418;display:none;}
+  #dialog .learn.show{display:block;}
+  #dialog .learn b{color:var(--vermillion-d);}
+  #dialog .learn.card-show{display:block;border:1px solid rgba(202,163,95,.75);border-left:4px solid var(--vermillion);
+    background:rgba(255,248,230,.78);padding:9px 10px 10px;}
+  #dialog .learn-card{display:grid;gap:5px;}
+  #dialog .learn-card .card-title{font-weight:800;color:var(--vermillion-d);font-size:14px;}
+  #dialog .learn-card .card-lead{font-weight:700;color:#5a3418;font-size:12px;}
+  #dialog .learn-card .card-body{color:#4b3920;font-size:12.5px;line-height:1.55;}
+  #dialog .learn-card .card-tip{margin-top:2px;padding-top:6px;border-top:1px dashed rgba(138,40,24,.28);
+    color:#6a4c1f;font-size:12px;line-height:1.45;}
+  #dialog .learn-card .card-tip b{color:var(--vermillion-d);}
+
+  #book{position:absolute;inset:0;z-index:40;display:none;background:rgba(20,14,8,.7);
+    backdrop-filter:blur(2px);padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 28px);}
+  #book.show{display:flex;flex-direction:column;animation:fade .2s;}
+  @keyframes fade{from{opacity:0;}to{opacity:1;}}
+  #book .cover{background:linear-gradient(160deg,#f5ecd6,#e6d4ae);border:3px solid var(--wood);
+    border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.6);flex:1;min-height:0;max-height:calc(var(--app-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 42px);display:flex;flex-direction:column;
+    overflow:hidden;position:relative;}
+  #book .cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:14px;
+    background:linear-gradient(90deg,var(--vermillion),var(--vermillion-d));box-shadow:inset -2px 0 4px rgba(0,0,0,.3);}
+  #book h2{font-size:18px;color:var(--ink);text-align:center;padding:16px 16px 8px 22px;font-weight:700;letter-spacing:.08em;}
+  #book .tabs{display:flex;gap:6px;padding:0 16px 10px 22px;}
+  #book .tab{flex:1;padding:7px;text-align:center;font-size:12px;font-weight:700;background:var(--washi-d);
+    border:2px solid var(--ui-line);border-radius:7px;color:var(--wood-d);cursor:pointer;}
+  #book .tab.active{background:var(--vermillion);color:#fff;border-color:#e9a060;}
+  #book .pages{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px 12px 22px;}
+  #book .entry{background:rgba(255,255,255,.5);border:1px solid var(--ui-line);border-radius:8px;
+    padding:10px 12px;margin-bottom:8px;font-size:13px;line-height:1.5;color:var(--ink);display:flex;gap:9px;align-items:flex-start;}
+  #book .entry .e-ico{font-size:20px;flex:none;}
+  #book .entry.cat-entry{align-items:center;gap:11px;}
+  #book .entry .cat-book-icon{width:58px;height:58px;border-radius:10px;object-fit:cover;flex:none;
+    border:2px solid var(--ui-line);background:#f8efd9;box-shadow:0 2px 0 rgba(90,52,24,.25);}
+  #book .entry b{color:var(--vermillion-d);display:block;margin-bottom:2px;font-size:14px;}
+  #book .empty{text-align:center;color:#9a8868;padding:30px 10px;font-size:13px;line-height:1.7;}
+  #book .close{margin:0 16px 12px 22px;padding:11px;text-align:center;background:var(--wood);color:#fff;
+    font-weight:700;border-radius:9px;cursor:pointer;box-shadow:0 3px 0 var(--wood-d);font-size:15px;}
+  #book .close:active{transform:translateY(2px);box-shadow:0 1px 0 var(--wood-d);}
+
+  #toast-layer{position:absolute;left:0;right:0;top:28%;z-index:35;display:flex;flex-direction:column;
+    align-items:center;gap:8px;pointer-events:none;}
+  .toast{background:linear-gradient(180deg,#fbf4e2,#efe1c2);border:2px solid var(--gold);border-radius:10px;
+    padding:10px 18px;font-size:14px;font-weight:700;color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.4);
+    display:flex;align-items:center;gap:8px;text-align:center;
+    animation:toastIn .3s ease-out,toastOut .4s ease-in 1.9s forwards;}
+  @keyframes toastIn{from{transform:scale(.8) translateY(-10px);opacity:0;}to{transform:scale(1);opacity:1;}}
+  @keyframes toastOut{to{opacity:0;transform:translateY(-8px);}}
+  .toast .t-ico{font-size:20px;}
+
+  #title{position:absolute;inset:0;z-index:50;
+    background:linear-gradient(180deg,#2a1810 0%,#48241a 45%,#6a3420 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px;}
+  #title.hide{display:none;}
+  #title .torii-big{width:120px;height:108px;margin-bottom:6px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5));}
+  #title h1{color:#fbe9c0;font-size:30px;letter-spacing:.14em;font-weight:700;
+    text-shadow:0 3px 0 #6a1810,0 5px 10px rgba(0,0,0,.6);}
+  #title .sub{color:#e9b878;font-size:14px;letter-spacing:.34em;margin-top:2px;}
+  #title .start{margin-top:24px;padding:14px 40px;font-size:17px;font-weight:700;
+    background:linear-gradient(180deg,#f3ead4,#d8c39c);color:var(--wood-d);border:3px solid var(--gold);
+    border-radius:30px;cursor:pointer;box-shadow:0 4px 0 #a87c1e;animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+  #title .hint{color:#c89868;font-size:11px;margin-top:18px;line-height:1.6;}
+  #debug-editor{position:absolute;right:6px;bottom:calc(env(safe-area-inset-bottom) + 154px);z-index:28;
+    width:min(190px,calc(100% - 12px));display:none;background:rgba(20,14,8,.68);border:2px solid rgba(94,218,94,.85);border-radius:8px;color:#eaffea;
+    padding:6px;font:10px ui-monospace,SFMono-Regular,Menlo,monospace;pointer-events:auto;backdrop-filter:blur(3px);}
+  #debug-editor.show{display:block;}
+  #debug-editor .dbg-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:4px 0;}
+  #debug-editor .dbg-head{justify-content:space-between;}
+  #debug-editor .dbg-full{display:block;}
+  #debug-editor.minimized .dbg-full{display:none;}
+  #debug-editor label{display:flex;align-items:center;gap:3px;}
+  #debug-editor input,#debug-editor select{width:48px;background:#e8f6d8;color:#172015;border:1px solid #5eda5e;border-radius:4px;padding:3px;font:inherit;}
+  #debug-editor select{width:92px;}
+  #debug-editor button{background:#d8f0c0;color:#172015;border:1px solid #5eda5e;border-radius:4px;padding:3px 5px;font:inherit;}
+  #debug-editor button:disabled{opacity:.45;}
+  #debug-editor textarea{width:100%;height:38px;background:rgba(7,16,7,.86);color:#caffca;border:1px solid #5eda5e;border-radius:4px;padding:4px;font:inherit;resize:none;}
+  #debug-editor .dbg-info{opacity:.9;line-height:1.35;}
+  #debug-editor input,#debug-editor textarea{-webkit-user-select:text;user-select:text;}
+  #controls,#dpad,.dbtn,#act-cluster,.act,#book-btn,#debug-btn,#start-btn,#dialog,#virtual-stick,#stick-base,#stick-knob,#debug-editor button{
+    touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  @media(max-height:700px){
+    :root{--dpad-size:120px;--dpad-cell:40px;}
+    #hud-top{padding:calc(env(safe-area-inset-top) + 5px) 6px 0;gap:5px;}
+    #hud-left{max-width:calc(100% - 120px);gap:4px;}
+    #area-name{padding:5px 8px;font-size:12px;}
+    #quest-bar{padding:5px 8px;font-size:10px;line-height:1.25;}
+    #cat-count{padding:5px 7px;font-size:12px;}
+    #book-btn{width:40px;height:40px;padding:4px;}
+    #debug-btn{width:36px;height:28px;}
+    #controls{padding:0 8px calc(env(safe-area-inset-bottom) + 7px);}
+    #act-cluster{padding-bottom:3px;}
+    .act .circle{width:48px;height:48px;}
+    #dialog{bottom:calc(env(safe-area-inset-bottom) + 8px);}
+    #dialog .box{padding:12px 14px 14px;}
+    #dialog .text{font-size:14px;line-height:1.5;}
+    #debug-editor{right:4px;bottom:calc(env(safe-area-inset-bottom) + 132px);max-height:145px;overflow:auto;}
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" draggable="false"></canvas>
+
+  <div id="hud-top">
+    <div id="hud-left">
+      <div class="panel" id="area-name">
+        <svg class="torii" viewBox="0 0 18 16"><rect x="1" y="2" width="16" height="2.5" fill="#c4402a"/><rect x="2" y="5" width="14" height="1.5" fill="#c4402a"/><rect x="3" y="3" width="2.5" height="13" fill="#c4402a"/><rect x="12.5" y="3" width="2.5" height="13" fill="#c4402a"/></svg>
+        <span id="area-label">伏見稲荷 大鳥居前</span>
+      </div>
+      <div class="panel" id="quest-bar">
+        <span class="q-ico">🎯</span>
+        <div><b>次の目標</b><br><span id="quest-text">楼門にお参りしよう</span></div>
+      </div>
+    </div>
+    <div id="hud-actions">
+      <div class="panel" id="cat-count">🐾 <span id="cat-n">0</span>/<span id="cat-total">0</span></div>
+      <div class="panel" id="book-btn"><span class="ico">📒</span><span class="lbl">帳面</span></div>
+      <div class="panel hidden" id="debug-btn">DBG</div>
+    </div>
+  </div>
+
+  <div id="dialog"><div class="box">
+    <div class="speaker" id="dlg-speaker">案内役</div>
+    <div class="dialog-layout">
+      <div class="dialog-text">
+        <div class="text" id="dlg-text"></div>
+        <div class="learn" id="dlg-learn"></div>
+        <span class="more-tag" id="dlg-more" style="display:none">もっと読む ▾</span>
+      </div>
+      <div class="cat-portrait"><img class="cat-closeup" id="dlg-cat-img" alt=""></div>
+    </div>
+    <div class="next" id="dlg-next">▼</div>
+  </div></div>
+
+  <div id="book"><div class="cover">
+    <h2>旅の帳面</h2>
+    <div class="tabs">
+      <div class="tab active" data-tab="cat">🐱 猫帳</div>
+      <div class="tab" data-tab="spot">⛩️ 見聞</div>
+      <div class="tab" data-tab="visit">📿 参拝</div>
+    </div>
+    <div class="pages" id="book-pages"></div>
+    <div class="close" id="book-close">とじる</div>
+  </div></div>
+
+  <div id="controls">
+    <div id="dpad">
+      <div class="dbtn" id="d-up">▲</div>
+      <div class="dbtn" id="d-left">◀</div>
+      <div class="dbtn" id="d-center"></div>
+      <div class="dbtn" id="d-right">▶</div>
+      <div class="dbtn" id="d-down">▼</div>
+    </div>
+    <div id="act-cluster">
+      <div class="act primary disabled" id="act-main">
+        <div class="circle" id="act-icon">🔍</div>
+        <div class="lbl" id="act-label">しらべる</div>
+      </div>
+    </div>
+  </div>
+  <div id="virtual-stick" class="virtual-stick">
+    <div id="stick-base"></div>
+    <div id="stick-knob"></div>
+  </div>
+
+  <div id="toast-layer"></div>
+
+  <div id="debug-editor">
+    <div class="dbg-row dbg-head">
+      <b>Blocker</b>
+      <select id="dbg-blocker-select"></select>
+      <button id="dbg-copy">Copy config</button>
+      <button id="dbg-min">min</button>
+    </div>
+    <div class="dbg-full">
+      <div class="dbg-row">
+        <label>x <input id="dbg-bx" type="number" step="1"></label>
+        <label>y <input id="dbg-by" type="number" step="1"></label>
+        <label>w <input id="dbg-bw" type="number" step="1"></label>
+        <label>h <input id="dbg-bh" type="number" step="1"></label>
+      </div>
+      <div class="dbg-row">
+        <span>focus</span><button data-dbg-step="-5">-5</button><button data-dbg-step="-1">-1</button>
+        <button data-dbg-step="1">+1</button><button data-dbg-step="5">+5</button>
+      </div>
+      <div class="dbg-row">
+        <span>W</span><button data-dbg-size="w" data-dbg-size-step="-5">-5</button><button data-dbg-size="w" data-dbg-size-step="-1">-1</button>
+        <button data-dbg-size="w" data-dbg-size-step="1">+1</button><button data-dbg-size="w" data-dbg-size-step="5">+5</button>
+      </div>
+      <div class="dbg-row">
+        <span>H</span><button data-dbg-size="h" data-dbg-size-step="-5">-5</button><button data-dbg-size="h" data-dbg-size-step="-1">-1</button>
+        <button data-dbg-size="h" data-dbg-size-step="1">+1</button><button data-dbg-size="h" data-dbg-size-step="5">+5</button>
+      </div>
+      <div class="dbg-row">
+        <button id="dbg-add">Add</button>
+        <button id="dbg-dup">Duplicate</button>
+        <button id="dbg-del">Delete</button>
+        <button id="dbg-round">Round</button>
+      </div>
+      <div class="dbg-row">
+        <b>Player</b>
+        <label>collision <input id="dbg-player-r" type="number" step="1" min="0"></label>
+      </div>
+      <div class="dbg-row">
+        <span>R</span><button data-dbg-player-step="-5">-5</button><button data-dbg-player-step="-1">-1</button>
+        <button data-dbg-player-step="1">+1</button><button data-dbg-player-step="5">+5</button>
+      </div>
+      <div class="dbg-row dbg-head">
+        <b>Entity</b>
+        <select id="dbg-entity-select"></select>
+      </div>
+      <div class="dbg-row">
+        <label>x <input id="dbg-ex" type="number" step="1"></label>
+        <label>y <input id="dbg-ey" type="number" step="1"></label>
+        <label>r <input id="dbg-er" type="number" step="1" min="1"></label>
+      </div>
+      <div class="dbg-row">
+        <span>entity</span><button data-dbg-entity-step="-5">-5</button><button data-dbg-entity-step="-1">-1</button>
+        <button data-dbg-entity-step="1">+1</button><button data-dbg-entity-step="5">+5</button>
+      </div>
+      <div class="dbg-info" id="dbg-info"></div>
+      <textarea id="dbg-map-output" readonly></textarea>
+    </div>
+    <span id="dbg-copy-status"></span>
+  </div>
+
+  <div id="title">
+    <svg class="torii-big" viewBox="0 0 100 90">
+      <rect x="6" y="14" width="88" height="11" rx="2" fill="#c4402a"/>
+      <rect x="2" y="11" width="96" height="5" rx="2" fill="#8a2818"/>
+      <rect x="14" y="30" width="72" height="7" rx="1" fill="#c4402a"/>
+      <rect x="18" y="20" width="11" height="68" fill="#c4402a"/>
+      <rect x="71" y="20" width="11" height="68" fill="#c4402a"/>
+      <rect x="16" y="20" width="15" height="4" fill="#8a2818"/>
+      <rect x="69" y="20" width="15" height="4" fill="#8a2818"/>
+    </svg>
+    <h1 id="title-name">京都クエスト</h1>
+    <div class="sub">ふしみいなり</div>
+    <div class="start" id="start-btn">はじめる</div>
+    <div class="hint">十字キーで移動・まるボタンで調べる/話す/なでる<br>近づくとボタンが反応するで</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const cvs=document.getElementById('game'), ctx=cvs.getContext('2d');
+const VW=180, VH=320;
+cvs.width=VW; cvs.height=VH; ctx.imageSmoothingEnabled=false;
+function updateAppHeight(){
+  const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
+  document.documentElement.style.setProperty('--app-height',`${Math.max(320,Math.floor(h))}px`);
+}
+updateAppHeight();
+addEventListener('resize',updateAppHeight,{passive:true});
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',updateAppHeight,{passive:true});
+  visualViewport.addEventListener('scroll',updateAppHeight,{passive:true});
+}
+
+// 歩けるエリアは画面とほぼ同じ高さに収める = 神社の眺めが常にフレーム内に入る
+// ワールド縦 360 / 画面 320 / カメラは僅かに追従(ほぼ固定)
+let SCENE='sando';
+let WORLD_H=380;
+const FLOOR={top:196, bot:352};   // 参道の歩ける帯（鳥居の手前〜画面下）
+// シーンごとに歩ける縦範囲が異なる。本殿/千本鳥居は奥(上)まで歩けるようにする。
+function floorTop(){ return MAPS[SCENE].walkable.top; }
+function floorBot(){ return MAPS[SCENE].walkable.bottom; }
+
+let P={x:90,y:300,dir:'up',moving:false,anim:0,speed:1.1};
+let game={started:false,cats:{},spots:{},visits:{},quest:'楼門にお参りしよう',nearest:null,debug:false,debugEnabled:false};
+let PLAYER_COLLISION_R=0;
+let debugEditor={selected:0,entitySelected:0,dragging:false,dragOffsetX:0,dragOffsetY:0,minimized:false};
+const DEBUG_STORAGE_KEY='kyotoQuestDebugEnabled';
+const IS_IOS=/iP(ad|hone|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const URL_PARAMS=new URLSearchParams(location.search);
+const DPAD_MODE=URL_PARAMS.get('dpad')==='1';
+const STICK_ENABLED=!DPAD_MODE;
+
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x|0,y|0,w|0,h|0);}
+function circ(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();}
+function hash(x,y){let n=(x*374761393+y*668265263)>>>0;n=(n^(n>>13))*1274126177>>>0;return((n^(n>>16))>>>0)/4294967295;}
+
+const PLAYER_IDLE={
+  src:'assets/sprites/player-idle-4dir.png',
+  img:new Image(),
+  ready:false,
+  dirs:['down','up','left','right'],
+  cellW:627,
+  cellH:627,
+  drawH:30,
+  offsets:{
+    down:{x:-2,y:3},
+    up:{x:1,y:3},
+    left:{x:3,y:3},
+    right:{x:4,y:4}
+  },
+  frames:{}
+};
+const PLAYER_SIDE_WALK={
+  src:'assets/sprites/player-walk-side-right.png',
+  img:new Image(),
+  ready:false,
+  cellW:591,
+  cellH:887,
+  drawH:34,
+  sequence:[0,1,2,1],
+  offsets:{
+    right:{x:1,y:6},
+    left:{x:-1,y:6}
+  },
+  frames:[]
+};
+const USE_VERTICAL_WALK=true;
+const PLAYER_VERTICAL_WALK={
+  sequence:['stepA','idle','stepB','idle'],
+  frameCols:{stepA:0,idle:1,stepB:2},
+  up:{
+    src:'assets/sprites/player-walk-up.png',
+    img:new Image(),
+    ready:false,
+    cellW:724,
+    cellH:724,
+    drawH:34,
+    frameOffsets:{
+      stepA:{x:-3,y:4},
+      idle:{x:1,y:5},
+      stepB:{x:5,y:4}
+    },
+    frames:[]
+  },
+  down:{
+    src:'assets/sprites/player-walk-down.png',
+    img:new Image(),
+    ready:false,
+    cellW:724,
+    cellH:724,
+    drawH:34,
+    frameOffsets:{
+      stepA:{x:-3,y:5},
+      idle:{x:1,y:5},
+      stepB:{x:5,y:5}
+    },
+    frames:[]
+  }
+};
+const CAT_DRAW_H=28; // 24 / 28 / 32 を試しやすい猫表示サイズ
+const CAT_SPRITES={
+  cat_torii:{
+    src:'assets/sprites/cats/cat-calico-bandana-sheet.png',
+    img:new Image(),ready:false,cellW:724,cellH:724,phase:0,frames:{}
+  },
+  cat_shop:{
+    src:'assets/sprites/cats/cat-orange-tabby-sheet.png',
+    img:new Image(),ready:false,cellW:724,cellH:724,phase:2600,frames:{}
+  },
+  cat_lantern:{
+    src:'assets/sprites/cats/cat-black-bandana-sheet.png',
+    img:new Image(),ready:false,cellW:724,cellH:724,phase:5200,frames:{}
+  },
+  cat_honden:{
+    src:'assets/sprites/cats/cat-honden-hachiware-sheet.png',
+    img:new Image(),ready:false,cellW:724,cellH:724,phase:7800,frames:{}
+  },
+  cat_senbon:{
+    src:'assets/sprites/cats/cat-senbon-kijishiro-sheet.png',
+    img:new Image(),ready:false,cellW:724,cellH:724,drawH:30,phase:9400,
+    frameOffsets:{
+      poseA:{x:-4,y:6},
+      poseB:{x:3,y:6},
+      poseC:{x:10,y:6}
+    },
+    frames:{}
+  }
+};
+const NPC_SPRITES={
+  guide:{
+    src:'assets/sprites/npcs/npc-guide-oldman-sheet.png',
+    img:new Image(),ready:false,cols:3,cellW:724,cellH:724,drawH:26,phase:800,iosFlipYFix:true,
+    frameOffsets:{
+      poseA:{x:-3,y:3},
+      poseB:{x:1,y:3},
+      poseC:{x:6,y:3}
+    },
+    frames:{}
+  },
+  student:{
+    src:'assets/sprites/npcs/npc-student-sheet.png',
+    img:new Image(),ready:false,cols:3,cellW:723,cellH:725,drawH:28,phase:1800,
+    frameOffsets:{
+      poseA:{x:-2,y:3},
+      poseB:{x:1,y:3},
+      poseC:{x:4,y:3}
+    },
+    frames:{}
+  },
+  chaya:{
+    src:'assets/sprites/npcs/npc-chaya-woman-sheet.png',
+    img:new Image(),ready:false,cols:3,cellW:724,cellH:724,drawH:26,phase:2800,
+    frameOffsets:{
+      poseA:{x:-4,y:3},
+      poseB:{x:1,y:3},
+      poseC:{x:6,y:3}
+    },
+    frames:{}
+  },
+  tourist:{
+    src:'assets/sprites/npcs/npc-tourist-sheet.png',
+    img:new Image(),ready:false,cols:3,cellW:724,cellH:724,drawH:26,phase:3800,
+    frameOffsets:{
+      poseA:{x:-5,y:3},
+      poseB:{x:1,y:3},
+      poseC:{x:6,y:3}
+    },
+    frames:{}
+  },
+  npc_shrine_cleaner:{
+    src:'assets/sprites/npcs/npc-shrine-cleaner-sheet.png',
+    img:new Image(),ready:false,cols:3,cellW:724,cellH:724,drawH:28,phase:4800,
+    frameOffsets:{
+      poseA:{x:-3,y:4},
+      poseB:{x:-1,y:4},
+      poseC:{x:5,y:4}
+    },
+    frames:{}
+  }
+};
+function loadPlayerIdleSprite(){
+  const img=PLAYER_IDLE.img;
+  img.onload=()=>{
+    for(let col=0;col<PLAYER_IDLE.dirs.length;col++){
+      const dir=PLAYER_IDLE.dirs[col],frame=makePlayerIdleFrame(img,col);
+      PLAYER_IDLE.frames[dir]=frame;
+    }
+    PLAYER_IDLE.ready=true;
+  };
+  img.src=PLAYER_IDLE.src;
+}
+function loadPlayerSideWalkSprite(){
+  const img=PLAYER_SIDE_WALK.img;
+  img.onload=()=>{
+    PLAYER_SIDE_WALK.frames=[];
+    for(let col=0;col<3;col++)PLAYER_SIDE_WALK.frames[col]=makePlayerSideWalkFrame(img,col);
+    PLAYER_SIDE_WALK.ready=true;
+  };
+  img.onerror=()=>{PLAYER_SIDE_WALK.ready=false;};
+  img.src=PLAYER_SIDE_WALK.src;
+}
+function loadPlayerVerticalWalkSprites(){
+  for(const dir of ['up','down']){
+    const cfg=PLAYER_VERTICAL_WALK[dir],img=cfg.img;
+    img.onload=()=>{
+      cfg.ready=false;
+      cfg.frames={};
+      if(img.naturalWidth<cfg.cellW*3||img.naturalHeight<cfg.cellH)return;
+      for(const name of PLAYER_VERTICAL_WALK.sequence){
+        if(!cfg.frames[name])cfg.frames[name]=makePlayerVerticalWalkFrame(img,cfg,PLAYER_VERTICAL_WALK.frameCols[name]);
+      }
+      cfg.ready=PLAYER_VERTICAL_WALK.sequence.every(name=>cfg.frames[name]);
+    };
+    img.onerror=()=>{cfg.ready=false;};
+    img.src=cfg.src;
+  }
+}
+function loadCatSprites(){
+  for(const id in CAT_SPRITES){
+    const cfg=CAT_SPRITES[id],img=cfg.img;
+    img.onload=()=>{
+      cfg.ready=false;
+      cfg.frames={};
+      if(img.naturalWidth<cfg.cellW*3||img.naturalHeight<cfg.cellH)return;
+      cfg.frames.poseA=makeCatSpriteFrame(img,cfg,0);
+      cfg.frames.poseB=makeCatSpriteFrame(img,cfg,1);
+      cfg.frames.poseC=makeCatSpriteFrame(img,cfg,2);
+      cfg.ready=!!(cfg.frames.poseA&&cfg.frames.poseB&&cfg.frames.poseC);
+    };
+    img.onerror=()=>{cfg.ready=false;};
+    img.src=cfg.src;
+  }
+}
+function loadNpcSprites(){
+  for(const id in NPC_SPRITES){
+    const cfg=NPC_SPRITES[id],img=cfg.img;
+    img.onload=()=>{
+      cfg.ready=false;
+      cfg.frames={};
+      if(img.naturalWidth<cfg.cellW*cfg.cols||img.naturalHeight<cfg.cellH)return;
+      cfg.frames.poseA=makeNpcSpriteFrame(img,cfg,0);
+      cfg.frames.poseB=makeNpcSpriteFrame(img,cfg,1);
+      cfg.frames.poseC=makeNpcSpriteFrame(img,cfg,2);
+      cfg.ready=!!(cfg.frames.poseA&&cfg.frames.poseB&&cfg.frames.poseC);
+    };
+    img.onerror=()=>{cfg.ready=false;};
+    img.src=cfg.src;
+  }
+}
+function makePlayerIdleFrame(img,col){
+  const c=document.createElement('canvas'),g=c.getContext('2d');
+  c.width=PLAYER_IDLE.cellW;c.height=PLAYER_IDLE.cellH;
+  g.drawImage(img,col*PLAYER_IDLE.cellW,0,PLAYER_IDLE.cellW,PLAYER_IDLE.cellH,0,0,c.width,c.height);
+  transparentCreamBackground(c,g);
+  return c;
+}
+function makePlayerSideWalkFrame(img,col){
+  const c=document.createElement('canvas'),g=c.getContext('2d');
+  c.width=PLAYER_SIDE_WALK.cellW;c.height=PLAYER_SIDE_WALK.cellH;
+  g.drawImage(img,col*PLAYER_SIDE_WALK.cellW,0,PLAYER_SIDE_WALK.cellW,PLAYER_SIDE_WALK.cellH,0,0,c.width,c.height);
+  transparentCreamBackground(c,g);
+  return c;
+}
+function makePlayerVerticalWalkFrame(img,cfg,col){
+  const c=document.createElement('canvas'),g=c.getContext('2d');
+  c.width=cfg.cellW;c.height=cfg.cellH;
+  g.drawImage(img,col*cfg.cellW,0,cfg.cellW,cfg.cellH,0,0,c.width,c.height);
+  transparentCreamBackground(c,g);
+  return c;
+}
+function makeCatSpriteFrame(img,cfg,col){
+  const c=document.createElement('canvas'),g=c.getContext('2d');
+  c.width=cfg.cellW;c.height=cfg.cellH;
+  g.drawImage(img,col*cfg.cellW,0,cfg.cellW,cfg.cellH,0,0,c.width,c.height);
+  transparentCreamBackground(c,g);
+  return c;
+}
+function makeNpcSpriteFrame(img,cfg,col){
+  const c=document.createElement('canvas'),g=c.getContext('2d');
+  c.width=cfg.cellW;c.height=cfg.cellH;
+  g.drawImage(img,col*cfg.cellW,0,cfg.cellW,cfg.cellH,0,0,c.width,c.height);
+  transparentCreamBackground(c,g);
+  if(cfg.iosFlipYFix&&IS_IOS)flipCanvasPixelsY(c,g);
+  return c;
+}
+function flipCanvasPixelsY(c,g){
+  try{
+    const src=g.getImageData(0,0,c.width,c.height);
+    const dst=g.createImageData(c.width,c.height);
+    const row=c.width*4;
+    for(let y=0;y<c.height;y++){
+      const from=y*row,to=(c.height-1-y)*row;
+      dst.data.set(src.data.subarray(from,from+row),to);
+    }
+    g.putImageData(dst,0,0);
+  }catch(_){}
+}
+function transparentCreamBackground(c,g){
+  try{
+    const data=g.getImageData(0,0,c.width,c.height),p=data.data;
+    for(let i=0;i<p.length;i+=4){
+      if(p[i]>232&&p[i+1]>212&&p[i+2]>175)p[i+3]=0;
+    }
+    g.putImageData(data,0,0);
+  }catch(_){}
+}
+
+//============ 背景パーツ ============
+function trees(x,y,w,h,base,hi,sh){
+  for(let i=0;i<w*h/24;i++){
+    const rx=x+hash(i,x)*w, ry=y+hash(i*3,y)*h, rr=2+hash(i*7,x+y)*2.6, t=hash(i*5,x*y);
+    circ(rx,ry,rr,t<0.33?sh:t<0.7?base:hi);
+  }
+}
+function bigTorii(x,y,w,h){
+  const col='#d4452a',dk='#a83020',cap='#27272e';
+  ctx.fillStyle=cap;ctx.beginPath();
+  ctx.moveTo(x-7,y+9);ctx.quadraticCurveTo(x+w/2,y-3,x+w+7,y+9);
+  ctx.lineTo(x+w+7,y+16);ctx.quadraticCurveTo(x+w/2,y+6,x-7,y+16);ctx.closePath();ctx.fill();
+  R(x-5,y+15,w+10,5,col);R(x-5,y+15,w+10,1,'#e8603e');
+  R(x+9,y+34,w-18,8,col);R(x+9,y+34,w-18,1,'#e8603e');R(x+9,y+41,w-18,1,dk);
+  R(x+w/2-7,y+20,14,14,col);R(x+w/2-7,y+20,2,14,dk);R(x+w/2-7,y+20,14,2,'#e8603e');
+  R(x+11,y+34,15,h-34,col);R(x+w-26,y+34,15,h-34,col);
+  R(x+11,y+34,3,h-34,'#e8603e');R(x+w-26,y+34,3,h-34,'#e8603e');
+  R(x+21,y+34,4,h-34,dk);R(x+w-15,y+34,4,h-34,dk);
+  R(x+9,y+h-9,19,9,'#18181e');R(x+w-28,y+h-9,19,9,'#18181e');
+}
+function romonGate(x,y,w,h){
+  ctx.fillStyle='#5a4030';ctx.beginPath();
+  ctx.moveTo(x-7,y+15);ctx.lineTo(x+w/2,y-3);ctx.lineTo(x+w+7,y+15);
+  ctx.lineTo(x+w,y+18);ctx.lineTo(x+w/2,y+5);ctx.lineTo(x,y+18);ctx.closePath();ctx.fill();
+  R(x-3,y+15,w+6,3,'#3a2a1e');
+  R(x+w/2-1,y-8,2,7,'#d9a93a');                 // 千木
+  R(x+6,y+18,w-12,h-30,'#c4402a');R(x+6,y+18,w-12,2,'#e05a3a');
+  R(x+10,y+20,5,h-30,'#a83020');R(x+w-15,y+20,5,h-30,'#a83020');
+  R(x+w/2-9,y+22,18,8,'#e0d2a0');R(x+w/2-8,y+24,16,1,'#b89858');   // 扁額
+  R(x+w/2-9,y+32,18,h-44,'#352618');            // 入口の暗がり
+  R(x+8,y+16,w-16,2,'#7a5030');
+  R(x+17,y+28,3,5,'#e8d088');R(x+w-20,y+28,3,5,'#e8d088'); // 提灯
+}
+function lantern(cx,cy){
+  R(cx-1,cy+14,3,4,'#8a8278');R(cx-2,cy+11,5,3,'#9a9288');
+  R(cx-3,cy+6,7,5,'#aaa296');R(cx-2,cy+7,5,3,'#5a5248');R(cx-1,cy+8,2,2,'#e8c868');
+  ctx.fillStyle='#b8b0a4';ctx.beginPath();ctx.moveTo(cx-4,cy+4);ctx.lineTo(cx,cy);ctx.lineTo(cx+5,cy+4);ctx.closePath();ctx.fill();
+  R(cx-4,cy+3,9,2,'#c2bab0');
+}
+function signboard(cx,cy){
+  R(cx,cy+18,2,9,'#6a4a2a');R(cx+13,cy+18,2,9,'#6a4a2a');
+  R(cx-3,cy,21,20,'#7a5430');R(cx-1,cy+2,17,16,'#d8e0cc');
+  R(cx+1,cy+5,5,4,'#9ab488');R(cx+9,cy+4,4,5,'#b8c89a');R(cx+2,cy+11,10,1,'#5a8a4a');
+  R(cx-1,cy,17,3,'#5a3a20');
+}
+function foxStatue(cx,cy,flip){
+  ctx.save();if(flip){ctx.translate(cx*2,0);ctx.scale(-1,1);}
+  const x=cx;
+  R(x-5,cy+12,12,6,'#8a8278');R(x-5,cy+12,12,1,'#9a9288');
+  R(x-4,cy+4,9,9,'#cfc8bc');R(x-4,cy+4,9,2,'#ddd6ca');
+  R(x-3,cy-2,7,7,'#cfc8bc');
+  R(x-3,cy-5,2,3,'#cfc8bc');R(x+2,cy-5,2,3,'#cfc8bc');
+  R(x-1,cy,1,1,'#3a2a1e');R(x+2,cy,1,1,'#3a2a1e');R(x,cy+2,2,1,'#3a2a1e');
+  R(x-4,cy+6,9,4,'#c4402a');R(x-4,cy+6,9,1,'#e05a3a');
+  R(x+4,cy+3,3,8,'#cfc8bc');
+  ctx.restore();
+}
+function shopsLeft(x,y,w,h){
+  let cy=y;const tones=[['#8a5a34','#6a4424'],['#7a4e2e','#5a3a20'],['#946038','#704826']];
+  for(let i=0;cy<y+h;i++){
+    const sh=tones[i%3],bh=46;
+    R(x-2,cy,w+2,7,'#5a6a64');R(x-2,cy,w+2,2,'#6f7f78');
+    for(let rx=x;rx<x+w;rx+=4)R(rx,cy+2,1,5,'#48564f');
+    R(x,cy+7,w,bh-7,sh[0]);R(x,cy+7,w,2,sh[1]);
+    R(x+w-12,cy+12,10,15,'#c4402a');R(x+w-11,cy+15,8,1,'#e8d8b8');R(x+w-11,cy+19,8,1,'#e8d8b8');
+    R(x+4,cy+10,4,6,'#d86850');R(x+4,cy+10,4,1,'#3a2a1e');
+    R(x+3,cy+24,12,12,'#3a2c1e');for(let k=0;k<4;k++)R(x+3+k*3,cy+24,1,12,'#5a4a38');
+    cy+=bh;
+  }
+  R(x+w,y,3,h,'rgba(40,30,20,.25)');
+}
+function rightSide(x,y,w,h){
+  for(let fy=y;fy<y+44;fy+=10){R(x+2,fy,3,9,'#c4402a');R(x+10,fy,3,9,'#c4402a');}
+  R(x+2,y,w-4,3,'#a83020');
+  const uy=y+54;
+  R(x+6,uy+14,3,12,'#7a4b2a');
+  ctx.fillStyle='#c4402a';ctx.beginPath();ctx.moveTo(x-2,uy+14);ctx.lineTo(x+8,uy+2);ctx.lineTo(x+18,uy+14);ctx.closePath();ctx.fill();
+  R(x-2,uy+14,20,2,'#a83020');R(x-2,uy+26,18,8,'#b03828');R(x-2,uy+26,18,2,'#c4402a');
+  let cy=uy+42;
+  while(cy<y+h){R(x-2,cy,w,6,'#5a6a64');R(x,cy+6,w-2,38,'#7a4e2e');R(x,cy+6,w-2,2,'#5a3a20');
+    R(x+3,cy+20,12,12,'#3a2c1e');cy+=46;}
+  R(x-3,y,3,h,'rgba(40,30,20,.22)');
+}
+function stonePath(top,bot){
+  R(26,top,128,bot-top+4,'#c8bca2');R(52,top,76,bot-top+4,'#d2c7ad');
+  for(let gy=top;gy<bot+4;gy+=11){
+    const off=((gy/11)|0)%2*7;
+    for(let gx=26;gx<154;gx+=14){
+      const n=hash(gx,gy);
+      R(gx+off,gy,13,10,n<0.5?'#c5b99e':'#cabea3');
+      R(gx+off,gy,13,1,'#d8cdb2');R(gx+off,gy,1,10,'#bcb094');
+    }
+  }
+  R(26,top,3,bot-top+4,'#a89878');R(151,top,3,bot-top+4,'#a89878');
+}
+
+//============ シーン背景 ============
+function drawSando(camY){
+  const g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#cfe0d8');g.addColorStop(.35,'#dfe6d2');g.addColorStop(1,'#cdbfa0');
+  ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);
+  ctx.save();ctx.translate(0,-camY);
+  R(0,0,180,70,'#9fb48a');
+  trees(0,18,180,90,'#5f8a4a','#79a861','#3f6432');
+  trees(0,40,180,75,'#557e42','#6f9c56','#385a2c');
+  romonGate(50,40,80,60);                 // 楼門（奥）
+  for(let i=0;i<6;i++){const sy=104+i*5;R(54,sy,72,5,i%2?'#cfc4ad':'#c2b69c');R(54,sy,72,1,'#ddd2ba');}
+  bigTorii(36,128,108,120);               // 大鳥居（見せ場）
+  stonePath(FLOOR.top,FLOOR.bot);
+  shopsLeft(0,FLOOR.top,46,FLOOR.bot-FLOOR.top+10);
+  rightSide(134,FLOOR.top,46,FLOOR.bot-FLOOR.top+10);
+  lantern(42,FLOOR.top+18);lantern(138,FLOOR.top+18);
+  lantern(48,FLOOR.top+96);lantern(132,FLOOR.top+96);
+  signboard(150,FLOOR.top+60);
+  foxStatue(52,FLOOR.top-2,false);
+  foxStatue(128,FLOOR.top-2,true);
+  ctx.restore();
+}
+function drawRomon(camY){
+  const g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#c8dcd2');g.addColorStop(1,'#cbbd9e');ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);
+  ctx.save();ctx.translate(0,-camY);
+  trees(0,0,180,70,'#557e42','#6f9c56','#385a2c');
+  // 本殿（中央・大きく）
+  hondenSprite(45,52,90,80);
+  R(26,150,128,230,'#c8bca2');
+  stonePath(150,372);
+  temizu(128,196);
+  foxStatue(46,176,false);
+  lantern(42,228);lantern(138,228);
+  ctx.restore();
+}
+function hondenSprite(x,y,w,h){
+  ctx.fillStyle='#5a4030';ctx.beginPath();
+  ctx.moveTo(x-9,y+22);ctx.lineTo(x+w/2,y-5);ctx.lineTo(x+w+9,y+22);
+  ctx.lineTo(x+w,y+26);ctx.lineTo(x+w/2,y+6);ctx.lineTo(x,y+26);ctx.closePath();ctx.fill();
+  R(x-4,y+22,w+8,4,'#3a2a1e');
+  R(x+w/2-1,y-12,2,9,'#d9a93a');
+  R(x+w/2-9,y-2,5,3,'#caa35f');R(x+w/2+4,y-2,5,3,'#caa35f');
+  R(x+8,y+26,w-16,h-40,'#c4402a');R(x+8,y+26,w-16,2,'#e05a3a');
+  R(x+12,y+28,5,h-44,'#a83020');R(x+w-17,y+28,5,h-44,'#a83020');
+  R(x+12,y+30,w-24,3,'#d8cdb2');                 // 注連縄
+  R(x+w/2-12,y+38,24,h-56,'#352618');            // 内陣
+  R(x+w/2-14,y+h-16,28,8,'#6a4a2a');R(x+w/2-16,y+h-8,32,6,'#7a5a3a'); // 賽銭箱・階段
+}
+function temizu(x,y){
+  R(x-2,y+14,3,8,'#7a5430');R(x+10,y+14,3,8,'#7a5430');
+  ctx.fillStyle='#5a4030';ctx.beginPath();ctx.moveTo(x-5,y);ctx.lineTo(x+5,y-5);ctx.lineTo(x+15,y);ctx.closePath();ctx.fill();
+  R(x-4,y,18,4,'#4a3528');R(x-2,y+8,14,7,'#7a8278');R(x,y+10,10,3,'#5a8aa8');
+}
+function drawSenbon(camY){
+  ctx.fillStyle='#34241c';ctx.fillRect(0,0,VW,VH);
+  ctx.save();ctx.translate(0,-camY);
+  R(26,0,128,400,'#9a8068');stonePath(0,400);
+  for(let i=13;i>=0;i--){
+    const z=i/13,cy=40+i*26,tw=44+z*58,tx=90-tw/2,th=64+z*36;
+    const col=`rgb(${190-(z*22)|0},${60-(z*12)|0},${42-(z*10)|0})`;
+    R(tx,cy,6+z*4,th,col);R(tx+tw-(6+z*4),cy,6+z*4,th,col);
+    R(tx-4,cy,tw+8,5+z*3,col);R(tx-2,cy-4,tw+4,4,'#27272e');
+    R(tx,cy+13+z*8,tw,3+z*2,col);
+  }
+  ctx.restore();
+  const vg=ctx.createRadialGradient(90,150,30,90,150,150);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(20,10,6,.5)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,VW,VH);
+}
+
+//============ キャラ・猫 ============
+function drawGroundShadow(sx,sy,offY,rx,ry,alpha){
+  ctx.fillStyle=`rgba(0,0,0,${alpha})`;
+  ctx.beginPath();
+  ctx.ellipse(sx,sy+offY,rx,ry,0,0,7);
+  ctx.fill();
+}
+function drawPlayerFallback(sx,sy){
+  const walk=P.moving&&((P.anim>>3)&1),leg=walk?1:0;
+  const skin='#e8c4a0',hair='#3a2a1c',shirt='#3e7ab0',pants='#3a4658',bag='#b5662e';
+  drawGroundShadow(sx,sy,6,5.4,1.8,.16);
+  if(P.dir==='up'){
+    R(sx-4,sy-12,8,5,hair);R(sx-5,sy-7,10,9,shirt);R(sx-4,sy-6,8,7,bag);
+    R(sx-3,sy-4,2,3,'#8a4a20');R(sx+1,sy-4,2,3,'#8a4a20');
+    R(sx-4,sy+2,4,4+leg,pants);R(sx,sy+2,4,4-leg,pants);
+  }else if(P.dir==='down'){
+    R(sx-4,sy-12,8,6,hair);R(sx-3,sy-9,6,4,skin);
+    R(sx-2,sy-7,1,1,'#2a1c12');R(sx+1,sy-7,1,1,'#2a1c12');
+    R(sx-5,sy-5,10,8,shirt);R(sx-6,sy-4,2,6,bag);R(sx+4,sy-4,2,6,bag);
+    R(sx-4,sy+2,4,4+leg,pants);R(sx,sy+2,4,4-leg,pants);
+  }else{
+    const f=P.dir==='left';ctx.save();if(f){ctx.translate(sx*2,0);ctx.scale(-1,1);}
+    const x=sx;
+    R(x-4,sy-12,8,6,hair);R(x-1,sy-9,5,4,skin);R(x+2,sy-7,1,1,'#2a1c12');
+    R(x-5,sy-5,9,8,shirt);R(x-6,sy-4,3,7,bag);
+    R(x-3,sy+2,3,4+leg,pants);R(x+1,sy+2,3,4-leg,pants);
+    ctx.restore();
+  }
+}
+function drawPlayer(sx,sy){
+  if(P.moving&&(P.dir==='left'||P.dir==='right')&&PLAYER_SIDE_WALK.ready){
+    const idx=PLAYER_SIDE_WALK.sequence[Math.floor(P.anim/10)%PLAYER_SIDE_WALK.sequence.length];
+    const frame=PLAYER_SIDE_WALK.frames[idx];
+    if(frame){drawPlayerSideWalkFrame(frame,sx,sy,P.dir);return;}
+  }
+  if(USE_VERTICAL_WALK&&P.moving&&(P.dir==='up'||P.dir==='down')){
+    const cfg=PLAYER_VERTICAL_WALK[P.dir];
+    if(cfg&&cfg.ready){
+      const frameName=PLAYER_VERTICAL_WALK.sequence[Math.floor(P.anim/10)%PLAYER_VERTICAL_WALK.sequence.length];
+      const frame=cfg.frames[frameName];
+      if(frame){drawPlayerVerticalWalkFrame(frame,cfg,frameName,sx,sy);return;}
+    }
+  }
+  const frame=PLAYER_IDLE.frames[P.dir]||PLAYER_IDLE.frames.down;
+  if(!PLAYER_IDLE.ready||!frame){drawPlayerFallback(sx,sy);return;}
+  const drawH=PLAYER_IDLE.drawH,drawW=PLAYER_IDLE.cellW/PLAYER_IDLE.cellH*drawH;
+  const off=PLAYER_IDLE.offsets[P.dir]||{x:0,y:0};
+  drawGroundShadow(sx,sy,5,5.8,1.8,.17);
+  ctx.drawImage(frame,sx-drawW/2+off.x,sy-drawH+off.y,drawW,drawH);
+}
+function drawPlayerSideWalkFrame(frame,sx,sy,dir){
+  const drawH=PLAYER_SIDE_WALK.drawH,drawW=PLAYER_SIDE_WALK.cellW/PLAYER_SIDE_WALK.cellH*drawH;
+  const off=PLAYER_SIDE_WALK.offsets[dir]||PLAYER_SIDE_WALK.offsets.right;
+  const drawX=sx-drawW/2+off.x,drawY=sy-drawH+off.y;
+  drawGroundShadow(sx,sy,5,5.8,1.8,.17);
+  if(dir==='left'){
+    ctx.save();
+    ctx.translate(drawX+drawW,drawY);
+    ctx.scale(-1,1);
+    ctx.drawImage(frame,0,0,drawW,drawH);
+    ctx.restore();
+  }else{
+    ctx.drawImage(frame,drawX,drawY,drawW,drawH);
+  }
+}
+function drawPlayerVerticalWalkFrame(frame,cfg,frameName,sx,sy){
+  const drawH=cfg.drawH,drawW=cfg.cellW/cfg.cellH*drawH;
+  const off=cfg.frameOffsets[frameName]||cfg.frameOffsets.idle||{x:0,y:0};
+  const drawX=sx-drawW/2+off.x,drawY=sy-drawH+off.y;
+  drawGroundShadow(sx,sy,5,5.8,1.8,.17);
+  ctx.drawImage(frame,drawX,drawY,drawW,drawH);
+}
+function drawNPC(n,sx,sy){
+  const npcSprite=NPC_SPRITES[n.spriteKey||n.id];
+  if(npcSprite&&npcSprite.ready){
+    drawNpcSprite(npcSprite,sx,sy);
+    return;
+  }
+  drawGroundShadow(sx,sy,7,5,1.7,.15);
+  const skin=n.skin||'#e8c4a0';
+  R(sx-4,sy-12,8,5,n.hair||'#2a2018');
+  if(n.hat){R(sx-5,sy-13,10,3,n.hat);R(sx-6,sy-11,12,2,n.hat);}
+  R(sx-3,sy-9,6,4,skin);R(sx-2,sy-7,1,1,'#2a1c12');R(sx+1,sy-7,1,1,'#2a1c12');
+  R(sx-5,sy-5,10,8,n.color);R(sx-5,sy-5,10,2,n.color2||n.color);
+  if(n.apron)R(sx-4,sy-1,8,4,n.apron);
+  R(sx-4,sy+2,4,4,n.pants||'#3a3a42');R(sx,sy+2,4,4,n.pants||'#3a3a42');
+}
+function npcPoseName(cfg){
+  const t=(performance.now()+cfg.phase)%10500;
+  if(t>9800&&t<10200)return 'poseC';
+  return Math.floor(t/1900)%2===0?'poseA':'poseB';
+}
+function drawNpcSprite(cfg,sx,sy){
+  const pose=npcPoseName(cfg),frame=cfg.frames[pose]||cfg.frames.poseA;
+  if(!frame)return;
+  const drawH=cfg.drawH,drawW=cfg.cellW/cfg.cellH*drawH;
+  const off=cfg.frameOffsets[pose]||cfg.frameOffsets.poseB||{x:0,y:0};
+  drawGroundShadow(sx,sy,7,6,2,.16);
+  const smoothing=ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled=true;
+  const dx=Math.round(sx-drawW/2+off.x),dy=Math.round(sy-drawH+off.y);
+  ctx.save();
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.drawImage(frame,dx,dy,Math.abs(drawW),Math.abs(drawH));
+  ctx.restore();
+  ctx.imageSmoothingEnabled=smoothing;
+}
+function drawCat(c,sx,sy){
+  const catSprite=CAT_SPRITES[c.id];
+  if(catSprite&&catSprite.ready){
+    drawCatSprite(c,catSprite,sx,sy);
+    return;
+  }
+  if(game.cats[c.id]){R(sx-1,sy-13,2,2,'#e06060');R(sx-3,sy-12,2,1,'#e06060');R(sx+1,sy-12,2,1,'#e06060');}
+  drawGroundShadow(sx,sy,3,5.4,1.5,.14);
+  const b=c.body||'#d89048',d='#3a2a1e';
+  // 丸い体（伏せ気味）
+  R(sx-5,sy,11,6,b);R(sx-5,sy,11,2,'#00000010');
+  R(sx-5,sy+4,11,2,b);
+  // 頭（丸め）
+  R(sx-4,sy-6,8,6,b);R(sx-4,sy-6,8,1,'#ffffff18');
+  // 耳（小さく内寄り）
+  R(sx-4,sy-8,2,3,b);R(sx+2,sy-8,2,3,b);
+  R(sx-4,sy-8,2,1,'#00000022');R(sx+2,sy-8,2,1,'#00000022');
+  // 三毛
+  if(c.calico){R(sx-4,sy-6,3,4,'#f0e6d6');R(sx+2,sy,3,5,d);R(sx-4,sy+2,2,3,'#c87838');}
+  // 顔
+  R(sx-2,sy-4,1,1,d);R(sx+1,sy-4,1,1,d);R(sx-1,sy-2,2,1,'#c46a5a');
+  // 前足
+  R(sx-4,sy+5,2,2,b);R(sx+2,sy+5,2,2,b);
+  // しっぽ
+  const tw=Math.sin(P.anim*0.08+sx)*1.6;
+  R(sx+5,sy-1+tw,2,5,b);R(sx+5,sy+3,3,2,b);
+}
+function catPoseName(id){
+  const cfg=CAT_SPRITES[id],t=(performance.now()+cfg.phase)%11000;
+  if(t>10450&&t<10750)return 'poseC';
+  return Math.floor(t/1600)%2===0?'poseA':'poseB';
+}
+function drawCatSprite(c,cfg,sx,sy){
+  const pose=catPoseName(c.id),frame=cfg.frames[pose]||cfg.frames.poseA;
+  if(!frame)return;
+  const drawH=cfg.drawH||CAT_DRAW_H,drawW=cfg.cellW/cfg.cellH*drawH;
+  const off=cfg.frameOffsets?.[pose]||{x:0,y:0};
+  drawGroundShadow(sx,sy,3,6.2,1.7,.15);
+  const smoothing=ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(frame,sx-drawW/2+off.x,sy-drawH+off.y,drawW,drawH);
+  ctx.imageSmoothingEnabled=smoothing;
+  if(game.cats[c.id]){
+    R(sx+off.x-1,sy-drawH+off.y-3,2,2,'#e06060');
+    R(sx+off.x-3,sy-drawH+off.y-2,2,1,'#e06060');
+    R(sx+off.x+1,sy-drawH+off.y-2,2,1,'#e06060');
+  }
+}
+
+//============ エンティティ ============
+let ENTITIES=[];
+const SANDO_ENTITIES=[
+  {id:'guide',type:'npc',x:102,y:306,r:18,
+   sprite:{color:'#3a6ea5',color2:'#2a5a90',pants:'#2a3038'},name:'案内のおじさん',act:'はなす',
+   lines:[{t:'ようおまいり！\nここが伏見稲荷の大鳥居やで。\nでかいやろ〜。'},
+     {t:'鳥居をくぐる時はな、端を通って\n軽く一礼。真ん中は神さまの\n通り道やで。',
+      learn:'<b>豆知識：鳥居の意味</b>\n鳥居は俗世と神域の境目。くぐる時に気持ちを切り替えるんやて。',spot:'torii_manner'},
+     {t:'奥の楼門でお参りしてき。\nその先には有名な千本鳥居も\n待ってるで。'}]},
+  {id:'student',type:'npc',x:70,y:250,r:16,
+   sprite:{color:'#5a8a4a',color2:'#4a7a3a',hair:'#3a2a18',hat:'#d8c89a',pants:'#6a5a3a'},name:'修学旅行生',act:'はなす',
+   lines:[{t:'うわ、鳥居めっちゃ赤い！\n写真いっぱい撮っちゃった。'},
+     {t:'班行動でここ集合なんだ。\nお守り買って帰ろうかな〜。'}]},
+  {id:'chaya',type:'npc',x:47,y:298,r:17,
+   sprite:{color:'#9a4a3a',color2:'#7a3a2a',apron:'#e0d2b0',pants:'#4a3a2a'},name:'茶屋のおばちゃん',act:'はなす',
+   lines:[{t:'おこしやす。うちは稲荷せんべい\n売ってるえ。焼きたては\n香ばしいで〜。'},
+     {t:'狐の顔の形したせんべいも\nあるんよ。お土産にどうぞ。',
+      learn:'<b>豆知識：稲荷せんべい</b>\n参道名物の瓦せんべい。狐のお面の形に焼いたものもあるんやて。',spot:'senbei'}]},
+  {id:'tourist',type:'npc',x:136,y:258,r:17,
+   sprite:{color:'#c89030',color2:'#a87820',skin:'#e8b48a',hair:'#5a4030',hat:'#e8e0d0',pants:'#5a6a7a'},name:'外国人観光客',act:'はなす',
+   lines:[{t:'コンニチハ！センボントリイ、\nトテモ ビューティフル デスネ！'},
+     {t:'(身ぶり手ぶりで楼門の方を\n 指している)\nThank you! 行ってきます！'}]},
+  {id:'cat_torii',type:'cat',x:76,y:218,r:15,sprite:{body:'#d89048',calico:true},name:'気まぐれ猫',act:'なでる',
+   react:'…ゴロゴロ。\n(撫でられて満足そう)',learn:'鳥居の根元がお気に入りの昼寝スポットらしい。'},
+  {id:'cat_shop',type:'cat',x:64,y:334,r:15,sprite:{body:'#5a5a5a'},name:'人懐っこい猫',act:'なでる',
+   react:'にゃ〜ん♪\n(すり寄ってきた)',learn:'茶屋の前に住む看板猫。撫でられるのが大好き。'},
+  {id:'cat_lantern',type:'cat',x:126,y:288,r:15,sprite:{body:'#e8d088'},name:'落ち着いた猫',act:'なでる',
+   react:'(目を細めて\n のんびりしている)',learn:'灯籠の陰で日向ぼっこするマイペースな猫。'},
+  {id:'obj_torii',type:'object',x:90,y:203,r:23,name:'大鳥居',act:'しらべる',
+   lines:[{t:'見上げるほど大きな朱色の鳥居。\nくぐると、いよいよ神さまの\n領域や。',
+     card:{title:'大鳥居',lead:'ここから伏見稲荷の参道がはじまる。',
+      body:'鳥居は、神さまのいる場所と人の世界を分ける入口のようなものです。伏見稲荷では、朱色の鳥居が参道を彩り、訪れる人を神域へと導いてくれます。',
+      tip:'朱色には、魔除けや生命力を表す意味があるともいわれています。'},spot:'big_torii'}]},
+  {id:'obj_sign',type:'object',x:130,y:170,r:25,name:'境内案内図',act:'しらべる',
+   lines:[{t:'境内の案内図や。\n楼門→本殿→千本鳥居→奥社→\n四ツ辻→一ノ峰…と続いてる。',
+     card:{title:'境内案内',lead:'伏見稲荷は山全体に広がる大きな神社。',
+      body:'伏見稲荷大社は、本殿の周辺だけでなく、稲荷山へと続く参道全体に見どころがあります。千本鳥居の先にも、たくさんのお塚や参拝場所が続いています。',
+      tip:'時間に余裕があれば、奥へ進むほど静かな雰囲気も楽しめます。'},spot:'map'}]},
+  {id:'obj_fox',type:'object',x:67,y:188,r:18,name:'狐像',act:'しらべる',
+   lines:[{t:'凛とした狐の石像。稲荷の\n神さまのお使いやで。\n赤い前掛けがかわいい。',
+     card:{title:'お稲荷さんの狐',lead:'狐は神さまそのものではなく、お使いとされる存在。',
+      body:'伏見稲荷で見かける狐は、稲荷大神のお使いとされています。口にくわえているものには、稲穂、鍵、玉、巻物などがあり、それぞれに豊かさや知恵を感じさせる意味があります。',
+      tip:'狐像をよく見ると、くわえているものが少しずつ違うことがあります。'},spot:'fox'}]},
+  {id:'exit_romon',type:'exit',x:90,y:160,r:17,name:'楼門へ進む',act:'すすむ',to:'romon',
+   spawn:{x:90,y:330,dir:'up'}}
+];
+
+const ROMON_ENTITIES=[
+  {id:'honden',type:'object',x:90,y:136,r:42,name:'本殿',act:'お参り',
+   lines:[{t:'立派な本殿の前に来た。\n二礼二拍手一礼でお参りしよう。',
+     card:{title:'本殿',lead:'伏見稲荷大社の中心となる大切な場所。',
+      body:'本殿は、稲荷大神をお祀りする中心的な建物です。商売繁昌、五穀豊穣、家内安全などを願って、全国から多くの人が参拝に訪れます。',
+      tip:'参拝するときは、心を落ち着けて、感謝や願いをそっと伝えてみましょう。'},spot:'sanpai'}],visit:'honden'},
+  {id:'temizu',type:'object',x:47,y:205,r:23,name:'手水舎',act:'しらべる',
+   lines:[{t:'手と口を清める場所や。\n柄杓で左手→右手→口の順やで。',
+     card:{title:'手水舎',lead:'参拝前に心と手を清める場所。',
+      body:'手水舎では、手や口を清めてからお参りします。これは、神さまの前に進む前に、身を整えるための作法です。',
+      tip:'柄杓を使う作法は場所によって案内があるので、現地の表示に合わせると安心です。'},spot:'temizu'}]},
+  {id:'fox_left',type:'object',x:56,y:158,r:24,name:'左の狐像',act:'しらべる',
+   lines:[{t:'本殿前の左側に立つ狐像。\n口に何かをくわえているみたい。\n稲穂や鍵、玉が多いんやて。',
+     card:{title:'左の狐像',lead:'本殿前で参拝する人を見守る狐像。',
+      body:'伏見稲荷の狐像は、稲荷大神のお使いとされる存在です。口にくわえる稲穂や鍵、玉、巻物には、豊かさや守り、知恵を感じさせる意味があります。',
+      tip:'左右の狐像を見比べると、表情や持ち物の違いに気づくことがあります。'},spot:'fox_left'}]},
+  {id:'fox_right',type:'object',x:124,y:158,r:24,name:'右の狐像',act:'しらべる',
+   lines:[{t:'本殿前の右側にも狐像がある。\n左右で対になって、参拝する人を\n見守っているみたいや。',
+     card:{title:'右の狐像',lead:'左右で対になり、境内を守るように立つ狐像。',
+      body:'狐は神さまそのものではなく、稲荷大神のお使いとされています。左右の像が向かい合うように置かれていると、入口や大切な場所を守っているように感じられます。',
+      tip:'狐像の赤い前掛けは、信仰や願いの気持ちを表していることがあります。'},spot:'fox_right'}]},
+  {id:'cat_honden',type:'cat',x:134,y:301,r:18,sprite:{body:'#f4f1e8'},name:'本殿のはちわれ猫',act:'なでる',
+   react:'……にゃ。\n(静かに目を細めている)',learn:'本殿前で参拝客を見守る、落ち着いた白黒はちわれ猫。'},
+  {id:'npc_romon_cleaner',type:'npc',x:48,y:260,r:18,name:'境内を掃除している人',act:'はなす',spriteKey:'npc_shrine_cleaner',
+   lines:[{t:'このあたりは静かに歩くと、\n風の音まで聞こえるんですよ。'},
+     {t:'お参りのあとは、右手の方から\n千本鳥居へ進めます。\n足元に気をつけてくださいね。'}]},
+  {id:'to_senbon',type:'exit',x:156,y:204,r:24,name:'千本鳥居へ',act:'すすむ',to:'senbon',
+   spawn:{x:90,y:330,dir:'up'}},
+  {id:'back_sando',type:'exit',x:90,y:356,r:24,name:'参道へ戻る',act:'もどる',to:'sando',
+   spawn:{x:90,y:182,dir:'down'}}
+];
+
+const SENBON_ENTITIES=[
+  {id:'obj_senbon',type:'object',x:90,y:160,r:40,name:'千本鳥居',act:'しらべる',
+   lines:[{t:'朱色の鳥居がどこまでも続く…！\nまるで朱のトンネルや。',
+     card:{title:'千本鳥居',lead:'伏見稲荷を象徴する朱色の鳥居の道。',
+      body:'千本鳥居は、願いが通る、または願いが通ったお礼として奉納された鳥居が並ぶ参道です。朱色の鳥居が連なる景色は、伏見稲荷を代表する風景として知られています。',
+      tip:'「千本」は正確な本数というより、たくさん並ぶ鳥居を表す言葉として親しまれています。'},spot:'senbon'}],visit:'senbon'},
+  {id:'cat_senbon',type:'cat',x:120,y:292,r:18,sprite:{body:'#d8b048'},name:'千本鳥居のキジ白猫',act:'なでる',
+   react:'……にゃ。\n(静かにこちらを見ている)',learn:'千本鳥居の道でひっそり佇む、細身のキジ白猫。'},
+  {id:'to_next',type:'exit',x:90,y:126,r:24,name:'鳥居の奥へ',act:'すすむ',to:'senbon',
+   spawn:{x:90,y:330,dir:'up'}},
+  {id:'back_romon',type:'exit',x:90,y:356,r:24,name:'楼門・本殿前へ戻る',act:'もどる',to:'romon',
+   spawn:{x:146,y:244,dir:'down'}}
+];
+
+const MAPS={
+  sando:{
+    id:'sando',
+    areaLabel:'伏見稲荷 大鳥居前',
+    quest:'楼門にお参りしよう',
+    worldH:380,
+    spawn:{x:90,y:336,dir:'up'},
+    walkable:{left:45,right:140,top:154,bottom:374},
+    playerCollisionRadius:0,
+    blockers:[
+      {x:60,y:161,halfW:8.5,halfH:34},
+      {x:123,y:159,halfW:14.5,halfH:34},
+      {x:49,y:193,halfW:7,halfH:13},
+      {x:140,y:202,halfW:7.5,halfH:12.5},
+      {x:151,y:151,halfW:4,halfH:12},
+      {x:46,y:213,halfW:5,halfH:12},
+      {x:141,y:247,halfW:12,halfH:28.5},
+      {x:148,y:293,halfW:7,halfH:34}
+    ],
+    entities:SANDO_ENTITIES,
+    backgroundType:'code',
+    backgroundImage:'assets/bg/sando.png',
+    draw:'drawSando'
+  },
+  romon:{
+    id:'romon',
+    areaLabel:'伏見稲荷 楼門・本殿前',
+    quest:'本殿でお参りしよう',
+    worldH:380,
+    spawn:{x:90,y:330,dir:'up'},
+    walkable:{left:32,right:164,top:142,bottom:364},
+    playerCollisionRadius:0,
+    blockers:[
+      {x:44,y:188,halfW:19.5,halfH:21.5},
+      {x:49,y:148,halfW:15,halfH:14},
+      {x:137,y:154,halfW:17,halfH:15.5},
+      {x:141,y:183,halfW:23.5,halfH:15.5},
+      {x:30,y:326,halfW:12,halfH:42},
+      {x:155,y:332,halfW:8.5,halfH:33.5},
+      {x:164,y:239,halfW:14,halfH:26.5},
+      {x:35,y:214,halfW:10.5,halfH:12}
+    ],
+    entities:ROMON_ENTITIES,
+    backgroundType:'code',
+    backgroundImage:'assets/bg/romon.png',
+    draw:'drawRomon'
+  },
+  senbon:{
+    id:'senbon',
+    areaLabel:'伏見稲荷 千本鳥居',
+    quest:'鳥居の先へ進んでみよう',
+    worldH:380,
+    spawn:{x:90,y:330,dir:'up'},
+    walkable:{left:52,right:118,top:128,bottom:366},
+    playerCollisionRadius:0,
+    blockers:[
+      {x:54,y:174,halfW:10,halfH:45.5},
+      {x:66,y:145,halfW:8,halfH:28.5}
+    ],
+    entities:SENBON_ENTITIES,
+    backgroundType:'code',
+    backgroundImage:'assets/bg/senbon.png',
+    draw:'drawSenbon',
+    toastSub:'右側通行やで'
+  }
+};
+
+const BACKGROUND_IMAGES={};
+const BACKGROUND_DRAWERS={drawSando,drawRomon,drawSenbon};
+function loadBackgroundImages(){
+  for(const id in MAPS){
+    const src=MAPS[id].backgroundImage;if(!src)continue;
+    const img=new Image();
+    BACKGROUND_IMAGES[id]={img,ready:false,error:false};
+    img.onload=()=>{BACKGROUND_IMAGES[id].ready=true;};
+    img.onerror=()=>{BACKGROUND_IMAGES[id].error=true;};
+    img.src=src;
+  }
+}
+function drawSceneBackground(sceneId,camY){
+  const map=MAPS[sceneId],bg=BACKGROUND_IMAGES[sceneId];
+  if(bg&&bg.ready){
+    ctx.drawImage(bg.img,0,-camY,VW,map.worldH);
+    return;
+  }
+  const draw=BACKGROUND_DRAWERS[map.draw];
+  if(draw)draw(camY);
+}
+
+const SPOT_FULL={
+  torii_manner:{ico:'⛩️',title:'鳥居のくぐり方',text:'端を通って軽く一礼。真ん中は神さまの通り道。'},
+  senbei:{ico:'🍘',title:'稲荷せんべい',text:'狐の面の形に焼いた参道名物の瓦せんべい。'},
+  big_torii:{ico:'⛩️',title:'大鳥居',text:'ここから伏見稲荷の参道がはじまる。'},
+  map:{ico:'🗺️',title:'境内案内',text:'伏見稲荷は山全体に広がる大きな神社。'},
+  fox:{ico:'🦊',title:'お稲荷さんの狐',text:'狐は神さまそのものではなく、お使いとされる存在。'},
+  sanpai:{ico:'🙏',title:'本殿',text:'伏見稲荷大社の中心となる大切な場所。'},
+  temizu:{ico:'💧',title:'手水舎',text:'参拝前に心と手を清める場所。'},
+  fox_left:{ico:'🦊',title:'左の狐像',text:'本殿前で参拝する人を見守る狐像。'},
+  fox_right:{ico:'🦊',title:'右の狐像',text:'左右で対になり、境内を守るように立つ狐像。'},
+  senbon:{ico:'⛩️',title:'千本鳥居',text:'伏見稲荷を象徴する朱色の鳥居の道。'}
+};
+const CAT_META={
+  cat_torii:{ico:'🐱',name:'気まぐれ猫',text:'鳥居の根元がお気に入りの昼寝スポット。',
+    closeup:'assets/ui/cats/cat-calico-closeup.png',icon:'assets/ui/cat-book/cat-calico-icon.png'},
+  cat_shop:{ico:'🐈',name:'人懐っこい猫',text:'茶屋の前に住む看板猫。撫でられ好き。',
+    closeup:'assets/ui/cats/cat-orange-tabby-closeup.png',icon:'assets/ui/cat-book/cat-orange-tabby-icon.png'},
+  cat_lantern:{ico:'🐈‍⬛',name:'落ち着いた猫',text:'灯籠の陰で日向ぼっこするお山の主。',
+    closeup:'assets/ui/cats/cat-black-closeup.png',icon:'assets/ui/cat-book/cat-black-icon.png'},
+  cat_honden:{ico:'🐱',name:'本殿のはちわれ猫',text:'本殿前で参拝客を静かに見守る、白黒はちわれの猫。',
+    closeup:'assets/ui/cats/cat-honden-hachiware-closeup.png',icon:'assets/ui/cat-book/cat-honden-hachiware-icon.png'},
+  cat_senbon:{ico:'🐱',name:'千本鳥居のキジ白猫',text:'千本鳥居の道でひっそり佇む、細身のキジ白猫。',
+    closeup:'assets/ui/cats/cat-senbon-kijishiro-closeup.png',icon:'assets/ui/cat-book/cat-senbon-kijishiro-icon.png'}
+};
+const VISIT_META={
+  honden:{ico:'📿',name:'本殿参拝',text:'二礼二拍手一礼でお参りした。'},
+  senbon:{ico:'⛩️',name:'千本鳥居',text:'朱のトンネルを通り抜けた。'}
+};
+
+//============ 当たり判定 ============
+const NPC_SOLID_BOX={halfW:5,halfH:4,offsetX:0,offsetY:0};
+const CAT_SOLID_BOX={halfW:4,halfH:3,offsetX:0,offsetY:0};
+function getEntitySolidBox(e){
+  if(!e||e.solid===false)return null;
+  if(e.solidBox)return {...e.solidBox};
+  if(Number.isFinite(e.solidW)||Number.isFinite(e.solidH)){
+    return {
+      halfW:Math.max(0,Number(e.solidW)||0)/2,
+      halfH:Math.max(0,Number(e.solidH)||0)/2,
+      offsetX:Number(e.solidOffsetX)||0,
+      offsetY:Number(e.solidOffsetY)||0
+    };
+  }
+  if(e.type==='npc')return {...NPC_SOLID_BOX};
+  if(e.type==='cat')return {...CAT_SOLID_BOX};
+  return null;
+}
+function canWalkHard(x,y){
+  const map=MAPS[SCENE],w=map.walkable;
+  const r=PLAYER_COLLISION_R;
+  if(x-r<w.left||x+r>w.right)return false;
+  if(y-r<w.top+6||y+r>w.bottom)return false;
+  for(const b of map.blockers){
+    if(Math.abs(x-b.x)<b.halfW+r&&Math.abs(y-b.y)<b.halfH+r)return false;
+  }
+  return true;
+}
+function isBlockedByEntitySolid(nextX,nextY,currentX=null,currentY=null){
+  const r=PLAYER_COLLISION_R;
+  for(const e of ENTITIES){
+    const box=getEntitySolidBox(e);
+    if(!box)continue;
+    // 4方向RPG向けに、NPC/catは足元の小さい矩形だけを止める。
+    const cx=e.x+(box.offsetX||0),cy=e.y+(box.offsetY||0);
+    if(Math.abs(nextX-cx)<box.halfW+r&&Math.abs(nextY-cy)<box.halfH+r)return true;
+  }
+  return false;
+}
+function canWalk(x,y,currentX=null,currentY=null){
+  if(!canWalkHard(x,y))return false;
+  return !isBlockedByEntitySolid(x,y,currentX,currentY);
+}
+
+//============ 近接判定 ============
+function updateNearest(){
+  let best=null,bd=1e9;
+  for(const e of ENTITIES){const d=Math.hypot(P.x-e.x,P.y-e.y);if(d<e.r&&d<bd){bd=d;best=e;}}
+  game.nearest=best;
+  const a=document.getElementById('act-main'),ic=document.getElementById('act-icon'),lb=document.getElementById('act-label');
+  if(best){a.classList.remove('disabled');
+    ic.textContent={npc:'💬',cat:'🐾',object:'🔍',exit:'➡️'}[best.type]||'🔍';lb.textContent=best.act;}
+  else{a.classList.add('disabled');ic.textContent='🔍';lb.textContent='しらべる';}
+}
+
+//============ 会話 ============
+let dlg={active:false,lines:[],idx:0,ent:null};
+function escapeHTML(s){
+  return String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function formatLearnCard(card){
+  return `<div class="learn-card">
+    <div class="card-title">${escapeHTML(card.title)}</div>
+    <div class="card-lead">${escapeHTML(card.lead)}</div>
+    <div class="card-body">${escapeHTML(card.body)}</div>
+    <div class="card-tip"><b>豆知識</b> ${escapeHTML(card.tip)}</div>
+  </div>`;
+}
+function startDialog(e){
+  if(!e.lines&&!e.react)return;
+  dlg.active=true;dlg.ent=e;dlg.idx=0;
+  dlg.lines=(e.type==='cat')?[{t:e.react,learn:e.learn?('<b>'+e.name+'</b>\n'+e.learn):null}]:e.lines;
+  showPage();document.getElementById('dialog').classList.add('show');
+}
+function showPage(){
+  const pg=dlg.lines[dlg.idx],sp=document.getElementById('dlg-speaker');
+  sp.textContent=dlg.ent.name;sp.className='speaker'+(dlg.ent.type==='cat'?' cat':'');
+  const dialog=document.getElementById('dialog');
+  const catImg=document.getElementById('dlg-cat-img'),catMeta=CAT_META[dlg.ent.id];
+  if(dlg.ent.type==='cat'&&catMeta?.closeup){
+    dialog.classList.add('cat-mode');
+    catImg.src=catMeta.closeup;catImg.onerror=()=>{dialog.classList.remove('cat-mode');catImg.removeAttribute('src');};
+  }else{dialog.classList.remove('cat-mode');catImg.removeAttribute('src');catImg.onerror=null;}
+  document.getElementById('dlg-text').textContent=pg.t;
+  const L=document.getElementById('dlg-learn'),M=document.getElementById('dlg-more');
+  L.classList.remove('show','card-show');L.innerHTML='';
+  M.onclick=null;
+  if(pg.card){
+    L.innerHTML=formatLearnCard(pg.card);
+    L.classList.add('show','card-show');
+    M.style.display='none';M.onpointerdown=null;
+  }else if(pg.learn){
+    M.style.display='inline-block';
+    M.onpointerdown=e=>{e.preventDefault();e.stopPropagation();L.innerHTML=pg.learn;L.classList.add('show');M.style.display='none';};
+  }
+  else{M.style.display='none';M.onpointerdown=null;}
+}
+function advance(){
+  const pg=dlg.lines[dlg.idx];
+  if(pg.spot&&!game.spots[pg.spot]){game.spots[pg.spot]=true;
+    toast('📖','見聞を記録した',SPOT_FULL[pg.spot]?.title||'');}
+  dlg.idx++;
+  if(dlg.idx>=dlg.lines.length)endDialog();else showPage();
+}
+function endDialog(){
+  const e=dlg.ent;
+  dlg.active=false;document.getElementById('dialog').classList.remove('show','cat-mode');
+  if(e.type==='cat'&&!game.cats[e.id]){game.cats[e.id]=true;updateCatCount();toast('🐱','猫帳に登録！',e.name);}
+  if(e&&e.visit){recordVisit(e.visit,e.name);
+    if(e.id==='honden'){setQuest('千本鳥居へ向かおう');setTimeout(()=>toast('🎉','本殿にお参り完了！','お山めぐりの第一歩や'),700);}
+    if(e.id==='senbon'){setQuest('（MVPはここまで。続きは拡張で！）');setTimeout(()=>toast('🎉','千本鳥居を抜けた！','この先は奥社…続きは次回！'),700);}
+  }
+  dlg.ent=null;
+}
+
+//============ アクション/遷移 ============
+function doAction(){
+  if(dlg.active){advance();return;}
+  if(document.getElementById('book').classList.contains('show'))return;
+  const e=game.nearest;if(!e)return;
+  if(e.type==='exit'){goExit(e);return;}
+  startDialog(e);
+}
+function goExit(e){
+  enterScene(e.to,true,e.spawn);
+}
+function enterScene(sceneId,showToast=true,spawnOverride=null){
+  const map=MAPS[sceneId];if(!map)return;
+  SCENE=map.id;WORLD_H=map.worldH;
+  const spawn=spawnOverride||map.spawn;
+  P.x=spawn.x;P.y=spawn.y;P.dir=spawn.dir;P.moving=false;
+  PLAYER_COLLISION_R=map.playerCollisionRadius??0;
+  document.getElementById('area-label').textContent=map.areaLabel;
+  setQuest(map.quest);
+  ENTITIES=map.entities.map(o=>({...o}));
+  debugEditor.selected=0;debugEditor.entitySelected=0;updateDebugEditor();
+  if(showToast)toast('⛩️',map.areaLabel,map.toastSub||'');
+}
+function enterSando(){enterScene('sando');}
+function enterRomon(){enterScene('romon');}
+function enterSenbon(){enterScene('senbon');}
+
+//============ 記録・HUD ============
+function recordVisit(id,label){if(!game.visits[id]){game.visits[id]=true;toast('📿','参拝を記録した',label||'');}}
+function catTargetTotal(){return Object.keys(CAT_META).length;}
+function updateCatCount(){
+  let n=0;for(const _ in game.cats)n++;
+  document.getElementById('cat-n').textContent=n;
+  document.getElementById('cat-total').textContent=catTargetTotal();
+}
+function setQuest(t){game.quest=t;document.getElementById('quest-text').textContent=t;}
+function toast(ico,title,sub){
+  const layer=document.getElementById('toast-layer'),el=document.createElement('div');
+  el.className='toast';
+  el.innerHTML=`<span class="t-ico">${ico}</span><span>${title}${sub?'<br><small style="font-weight:500;opacity:.8">'+sub+'</small>':''}</span>`;
+  layer.appendChild(el);setTimeout(()=>el.remove(),2400);
+}
+
+//============ デバッグ表示 ============
+// 開発用の隠しデバッグ入口。通常URLではDBG UIを出さない。
+function debugStorageSet(enabled){
+  try{
+    if(enabled)localStorage.setItem(DEBUG_STORAGE_KEY,'1');
+    else localStorage.removeItem(DEBUG_STORAGE_KEY);
+  }catch(_){}
+}
+function debugStorageGet(){
+  try{return localStorage.getItem(DEBUG_STORAGE_KEY)==='1';}
+  catch(_){return false;}
+}
+function applyDebugEnabled(enabled,notify=false){
+  game.debugEnabled=!!enabled;
+  if(!game.debugEnabled)game.debug=false;
+  const btn=document.getElementById('debug-btn');
+  btn.classList.toggle('hidden',!game.debugEnabled);
+  btn.classList.toggle('active',game.debugEnabled&&game.debug);
+  updateDebugEditor();
+  if(notify)toast(game.debugEnabled?'🛠️':'✅',game.debugEnabled?'DBG enabled':'DBG disabled','');
+}
+function initDebugAccess(){
+  if(URL_PARAMS.get('debug')==='1'){debugStorageSet(true);applyDebugEnabled(true);return;}
+  if(URL_PARAMS.get('debug')==='0'){debugStorageSet(false);applyDebugEnabled(false);return;}
+  applyDebugEnabled(debugStorageGet());
+}
+function bindDebugSecretTap(el){
+  let taps=[];
+  const onTap=e=>{
+    e.preventDefault();e.stopPropagation();
+    const now=Date.now();
+    taps=taps.filter(t=>now-t<2000);taps.push(now);
+    if(taps.length>=5){
+      taps=[];
+      const next=!game.debugEnabled;
+      debugStorageSet(next);applyDebugEnabled(next,true);
+    }
+  };
+  if('ontouchstart' in window)el.addEventListener('touchstart',onTap,{passive:false});
+  else el.addEventListener('pointerdown',onTap);
+}
+function toggleDebug(){
+  if(!game.debugEnabled){game.debug=false;updateDebugEditor();return;}
+  game.debug=!game.debug;
+  document.getElementById('debug-btn').classList.toggle('active',game.debug);
+  updateDebugEditor();
+}
+function debugConfigText(){
+  const map=MAPS[SCENE];
+  return JSON.stringify({
+    scene:SCENE,
+    walkable:map.walkable,
+    blockers:map.blockers,
+    playerCollisionRadius:map.playerCollisionRadius??PLAYER_COLLISION_R,
+    entities:ENTITIES.map(e=>({id:e.id,type:e.type,x:e.x,y:e.y,r:e.r}))
+  },null,2);
+}
+function updateDebugEditor(){
+  const editor=document.getElementById('debug-editor');
+  editor.classList.toggle('show',game.debugEnabled&&game.debug);
+  editor.classList.toggle('minimized',debugEditor.minimized);
+  if(!game.debugEnabled||!game.debug)return;
+  const map=MAPS[SCENE],sel=document.getElementById('dbg-blocker-select'),entSel=document.getElementById('dbg-entity-select');
+  const count=map.blockers.length;
+  debugEditor.selected=Math.max(0,Math.min(debugEditor.selected,count-1));
+  debugEditor.entitySelected=Math.max(0,Math.min(debugEditor.entitySelected,ENTITIES.length-1));
+  sel.innerHTML='';
+  map.blockers.forEach((b,i)=>{
+    const opt=document.createElement('option');
+    opt.value=i;opt.textContent=`${i}: x${Math.round(b.x)} y${Math.round(b.y)} w${Math.round(b.halfW*2)} h${Math.round(b.halfH*2)}`;
+    sel.appendChild(opt);
+  });
+  if(!count){
+    const opt=document.createElement('option');opt.value='';opt.textContent='blockerなし';sel.appendChild(opt);
+  }
+  sel.value=String(debugEditor.selected);
+  const b=map.blockers[debugEditor.selected];
+  entSel.innerHTML='';
+  ENTITIES.forEach((e,i)=>{
+    const opt=document.createElement('option');
+    opt.value=i;opt.textContent=`${i}: ${e.id||e.name} ${e.type} x${Math.round(e.x)} y${Math.round(e.y)} r${Math.round(e.r)}`;
+    entSel.appendChild(opt);
+  });
+  if(!ENTITIES.length){
+    const opt=document.createElement('option');opt.value='';opt.textContent='entityなし';entSel.appendChild(opt);
+  }
+  entSel.value=String(debugEditor.entitySelected);
+  const ent=ENTITIES[debugEditor.entitySelected];
+  for(const [id,val] of [['dbg-bx',b?.x],['dbg-by',b?.y],['dbg-bw',b?b.halfW*2:null],['dbg-bh',b?b.halfH*2:null]]){
+    const input=document.getElementById(id);
+    input.disabled=!b;input.value=b?Math.round(val):'';
+  }
+  document.getElementById('dbg-player-r').value=Math.round(PLAYER_COLLISION_R);
+  for(const [id,val] of [['dbg-ex',ent?.x],['dbg-ey',ent?.y],['dbg-er',ent?.r]]){
+    const input=document.getElementById(id);
+    input.disabled=!ent;input.value=ent?Math.round(val):'';
+  }
+  document.getElementById('dbg-dup').disabled=!b;
+  document.getElementById('dbg-del').disabled=!b;
+  const info=document.getElementById('dbg-info');
+  const selectedText=b?` selected=${debugEditor.selected} x${b.x} y${b.y} w${Math.round(b.halfW*2)} h${Math.round(b.halfH*2)}`:' selected=none';
+  const entText=ent?` entity=${ent.id||ent.name} r${ent.r}`:' entity=none';
+  info.textContent=`scene=${SCENE}${selectedText}${entText} playerCollision=${PLAYER_COLLISION_R}px`;
+  document.getElementById('dbg-min').textContent=debugEditor.minimized?'max':'min';
+  document.getElementById('dbg-map-output').value=debugConfigText();
+}
+function selectedBlocker(){
+  return MAPS[SCENE].blockers[debugEditor.selected]||null;
+}
+function selectedEntity(){
+  return ENTITIES[debugEditor.entitySelected]||null;
+}
+function syncSelectedEntityToMap(){
+  const ent=selectedEntity(),src=MAPS[SCENE].entities[debugEditor.entitySelected];
+  if(ent&&src){src.x=ent.x;src.y=ent.y;src.r=ent.r;}
+}
+function debugStatus(text){
+  const status=document.getElementById('dbg-copy-status');
+  status.textContent=text;setTimeout(()=>status.textContent='',1200);
+}
+function applyDebugEditorInputs(){
+  const b=selectedBlocker();if(!b)return;
+  const w=Math.max(2,Math.round(Number(document.getElementById('dbg-bw').value)||2));
+  const h=Math.max(2,Math.round(Number(document.getElementById('dbg-bh').value)||2));
+  b.x=Math.round(Number(document.getElementById('dbg-bx').value)||0);
+  b.y=Math.round(Number(document.getElementById('dbg-by').value)||0);
+  b.halfW=w/2;
+  b.halfH=h/2;
+  updateDebugEditor();
+}
+function nudgeSelectedBlocker(step){
+  const b=selectedBlocker();if(!b)return;
+  const ids=['dbg-bx','dbg-by','dbg-bw','dbg-bh'];
+  const el=ids.includes(document.activeElement?.id)?document.activeElement:document.getElementById('dbg-bx');
+  el.value=(Number(el.value)||0)+step;
+  applyDebugEditorInputs();
+  el.focus();
+}
+function nudgeBlockerSize(which,step){
+  const id=which==='h'?'dbg-bh':'dbg-bw';
+  const el=document.getElementById(id);
+  el.value=Math.max(2,(Number(el.value)||2)+step);
+  applyDebugEditorInputs();
+  el.focus();
+}
+function applyPlayerCollisionInput(){
+  const el=document.getElementById('dbg-player-r');
+  PLAYER_COLLISION_R=Math.max(0,Math.round(Number(el.value)||0));
+  MAPS[SCENE].playerCollisionRadius=PLAYER_COLLISION_R;
+  updateDebugEditor();
+}
+function nudgePlayerCollision(step){
+  const el=document.getElementById('dbg-player-r');
+  el.value=Math.max(0,(Number(el.value)||0)+step);
+  applyPlayerCollisionInput();
+  el.focus();
+}
+function applyEntityEditorInputs(){
+  const ent=selectedEntity();if(!ent)return;
+  ent.x=Math.round(Number(document.getElementById('dbg-ex').value)||0);
+  ent.y=Math.round(Number(document.getElementById('dbg-ey').value)||0);
+  ent.r=Math.max(1,Math.round(Number(document.getElementById('dbg-er').value)||1));
+  syncSelectedEntityToMap();
+  updateDebugEditor();
+}
+function nudgeSelectedEntity(step){
+  const ent=selectedEntity();if(!ent)return;
+  const ids=['dbg-ex','dbg-ey','dbg-er'];
+  const el=ids.includes(document.activeElement?.id)?document.activeElement:document.getElementById('dbg-er');
+  const min=el.id==='dbg-er'?1:0;
+  el.value=Math.max(min,(Number(el.value)||min)+step);
+  applyEntityEditorInputs();
+  el.focus();
+}
+function addBlocker(){
+  const map=MAPS[SCENE];
+  const x=Math.round(P?.x||90),y=Math.round(P?.y||220);
+  map.blockers.push({x,y,halfW:8,halfH:16});
+  debugEditor.selected=map.blockers.length-1;
+  updateDebugEditor();debugStatus('added');
+}
+function duplicateBlocker(){
+  const map=MAPS[SCENE],b=selectedBlocker();if(!b)return;
+  map.blockers.push({x:Math.round(b.x+4),y:Math.round(b.y+4),halfW:b.halfW,halfH:b.halfH});
+  debugEditor.selected=map.blockers.length-1;
+  updateDebugEditor();debugStatus('duplicated');
+}
+function deleteBlocker(){
+  const map=MAPS[SCENE],b=selectedBlocker();if(!b)return;
+  if(!confirm(`Delete blocker ${debugEditor.selected}?`))return;
+  map.blockers.splice(debugEditor.selected,1);
+  debugEditor.selected=Math.max(0,Math.min(debugEditor.selected,map.blockers.length-1));
+  updateDebugEditor();debugStatus('deleted');
+}
+function roundBlockers(){
+  const map=MAPS[SCENE];
+  map.blockers.forEach(b=>{
+    b.x=Math.round(b.x);b.y=Math.round(b.y);
+    b.halfW=Math.max(1,Math.round(b.halfW));b.halfH=Math.max(1,Math.round(b.halfH));
+  });
+  updateDebugEditor();debugStatus('rounded');
+}
+function debugLabel(text,x,y){
+  ctx.font='6px monospace';ctx.textBaseline='top';
+  const w=ctx.measureText(text).width+3;
+  ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(x-1,y-1,w,8);
+  ctx.fillStyle='#ffffff';ctx.fillText(text,x,y);
+}
+function debugEntityColor(type){
+  if(type==='cat')return {stroke:'rgba(255,226,80,.95)',fill:'rgba(255,226,80,.14)'};
+  if(type==='npc')return {stroke:'rgba(205,120,255,.95)',fill:'rgba(205,120,255,.14)'};
+  if(type==='exit')return {stroke:'rgba(80,255,140,.95)',fill:'rgba(80,255,140,.14)'};
+  return {stroke:'rgba(255,150,64,.95)',fill:'rgba(255,150,64,.14)'};
+}
+function drawDebug(camY){
+  const map=MAPS[SCENE],w=map.walkable;
+  ctx.save();
+  ctx.lineWidth=1;
+  ctx.fillStyle='rgba(64,255,128,.12)';
+  ctx.strokeStyle='rgba(64,255,128,.9)';
+  ctx.fillRect(w.left,w.top-camY,w.right-w.left,w.bottom-w.top);
+  ctx.strokeRect(w.left+.5,w.top-camY+.5,w.right-w.left,w.bottom-w.top);
+  debugLabel(`walk ${w.left},${w.top}-${w.right},${w.bottom}`,w.left+2,w.top-camY+3);
+
+  ctx.fillStyle='rgba(255,80,80,.22)';
+  ctx.strokeStyle='rgba(255,80,80,.95)';
+  for(let i=0;i<map.blockers.length;i++){
+    const b=map.blockers[i],selected=i===debugEditor.selected;
+    const x=b.x-b.halfW,y=b.y-camY-b.halfH,wid=b.halfW*2,hei=b.halfH*2;
+    ctx.fillStyle=selected?'rgba(255,220,64,.28)':'rgba(255,80,80,.22)';
+    ctx.strokeStyle=selected?'rgba(255,240,80,1)':'rgba(255,80,80,.95)';
+    ctx.lineWidth=selected?2:1;
+    ctx.fillRect(x,y,wid,hei);ctx.strokeRect(x+.5,y+.5,wid,hei);
+    if(selected){
+      const hs=3;
+      ctx.fillStyle='rgba(255,255,255,.95)';
+      ctx.strokeStyle='rgba(70,40,0,.95)';
+      for(const [hx,hy] of [[x,y],[x+wid,y],[x,y+hei],[x+wid,y+hei]]){
+        ctx.fillRect(hx-hs/2,hy-hs/2,hs,hs);
+        ctx.strokeRect(hx-hs/2+.5,hy-hs/2+.5,hs,hs);
+      }
+    }
+  }
+  ctx.lineWidth=1;
+
+  ctx.font='6px monospace';
+  for(let i=0;i<ENTITIES.length;i++){
+    const e=ENTITIES[i],selected=i===debugEditor.entitySelected;
+    const sy=e.y-camY;if(sy<-40||sy>VH+40)continue;
+    const col=debugEntityColor(e.type);
+    ctx.strokeStyle=selected?'rgba(255,255,255,1)':col.stroke;
+    ctx.fillStyle=col.fill;
+    ctx.lineWidth=selected?2:1;
+    ctx.beginPath();ctx.arc(e.x,sy,e.r,0,7);ctx.fill();ctx.stroke();
+    const solidBox=getEntitySolidBox(e);
+    if(solidBox){
+      const bx=e.x+(solidBox.offsetX||0)-solidBox.halfW;
+      const by=sy+(solidBox.offsetY||0)-solidBox.halfH;
+      ctx.strokeStyle='rgba(120,245,255,.95)';
+      ctx.fillStyle='rgba(120,245,255,.08)';
+      ctx.lineWidth=selected?1.5:1;
+      ctx.fillRect(bx,by,solidBox.halfW*2,solidBox.halfH*2);
+      ctx.strokeRect(bx+.5,by+.5,solidBox.halfW*2,solidBox.halfH*2);
+    }
+    R(e.x-1,sy-1,3,3,selected?'#fff4a0':'#ffffff');
+    debugLabel(e.id||e.name,e.x+3,sy-e.r-8);
+  }
+  ctx.lineWidth=1;
+
+  const pr=Math.max(PLAYER_COLLISION_R,2);
+  ctx.strokeStyle='rgba(80,220,255,.95)';
+  ctx.fillStyle='rgba(80,220,255,.12)';
+  ctx.beginPath();ctx.arc(P.x,P.y-camY,pr,0,7);ctx.fill();ctx.stroke();
+  debugLabel(`player r${PLAYER_COLLISION_R}`,P.x+4,P.y-camY-pr-9);
+
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(3,3,86,20);
+  ctx.fillStyle='#92ff92';ctx.font='7px monospace';ctx.textBaseline='top';
+  ctx.fillText(`DBG ${SCENE}`,6,5);
+  ctx.fillText(`P ${P.x.toFixed(1)},${P.y.toFixed(1)}`,6,14);
+  ctx.restore();
+}
+
+//============ 帳面 ============
+function openBook(tab){document.getElementById('book').classList.add('show');renderBook(tab||'cat');}
+function renderBook(tab){
+  document.querySelectorAll('#book .tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  const pages=document.getElementById('book-pages');pages.innerHTML='';let items=[];
+  if(tab==='cat'){for(const id in game.cats){const m=CAT_META[id];if(m)items.push(m);}
+    renderEntries(pages,items,'まだ猫に出会ってへん。\n参道を歩いて探してみよう🐾');}
+  else if(tab==='spot'){for(const id in game.spots){const m=SPOT_FULL[id];if(m)items.push({ico:m.ico,name:m.title,text:m.text});}
+    renderEntries(pages,items,'まだ何も調べてへん。\n鳥居や案内板を調べてみよう🔍');}
+  else{for(const id in game.visits){const m=VISIT_META[id];if(m)items.push(m);}
+    renderEntries(pages,items,'まだお参りしてへん。\n本殿でお参りしてみよう📿');}
+}
+function renderEntries(el,items,empty){
+  if(!items.length){el.innerHTML=`<div class="empty">${empty}</div>`;return;}
+  items.forEach(m=>{const d=document.createElement('div');d.className='entry';
+    if(m.icon){
+      d.classList.add('cat-entry');
+      d.innerHTML=`<img class="cat-book-icon" src="${m.icon}" alt=""><span class="e-ico" style="display:none">${m.ico}</span><div><b>${m.name||m.title}</b>${m.text}</div>`;
+      const img=d.querySelector('img'),fallback=d.querySelector('.e-ico');
+      img.onerror=()=>{img.style.display='none';fallback.style.display='inline-block';};
+    }else{
+      d.innerHTML=`<span class="e-ico">${m.ico}</span><div><b>${m.name||m.title}</b>${m.text}</div>`;
+    }
+    el.appendChild(d);});
+}
+
+//============ 入力 ============
+const held={up:false,down:false,left:false,right:false};
+function syncDpadVisual(){
+  const dpad=document.getElementById('dpad');
+  dpad.classList.toggle('is-active',held.up||held.down||held.left||held.right);
+  for(const dir of ['up','down','left','right']){
+    document.getElementById('d-'+dir).classList.toggle('is-pressed',held[dir]);
+  }
+}
+function suppressNativeTouch(id){
+  const el=document.getElementById(id);
+  el.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
+  el.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+}
+function bindDir(id,dir){
+  const el=document.getElementById(id);
+  const on=e=>{e.preventDefault();el.setPointerCapture?.(e.pointerId);held[dir]=true;syncDpadVisual();};
+  const off=e=>{e.preventDefault();held[dir]=false;syncDpadVisual();};
+  el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);
+  el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);el.addEventListener('lostpointercapture',off);
+}
+bindDir('d-up','up');bindDir('d-down','down');bindDir('d-left','left');bindDir('d-right','right');
+suppressNativeTouch('controls');suppressNativeTouch('hud-actions');suppressNativeTouch('dialog');suppressNativeTouch('start-btn');
+suppressNativeTouch('game');suppressNativeTouch('virtual-stick');
+const stickState={active:false,pointerId:null,cx:0,cy:0,dir:null,max:36,dead:10};
+function setStickDirection(dir){
+  for(const d of ['up','down','left','right'])held[d]=d===dir;
+  stickState.dir=dir;syncDpadVisual();
+}
+function resetVirtualStick(){
+  if(stickState.dir)for(const d of ['up','down','left','right'])held[d]=false;
+  stickState.active=false;stickState.pointerId=null;stickState.dir=null;
+  document.getElementById('virtual-stick').classList.remove('is-active');
+  document.getElementById('stick-knob').style.transform='translate(-50%,-50%)';
+  syncDpadVisual();
+}
+function updateVirtualStickDirection(dx,dy){
+  const dist=Math.hypot(dx,dy),knob=document.getElementById('stick-knob');
+  const k=dist>stickState.max?stickState.max/dist:1;
+  knob.style.transform=`translate(calc(-50% + ${dx*k}px), calc(-50% + ${dy*k}px))`;
+  if(dist<stickState.dead){setStickDirection(null);return;}
+  if(Math.abs(dx)>Math.abs(dy))setStickDirection(dx<0?'left':'right');
+  else setStickDirection(dy<0?'up':'down');
+}
+function canStartVirtualStick(e){
+  if(!STICK_ENABLED||stickState.active||!game.started)return false;
+  if(dlg.active||document.getElementById('book').classList.contains('show'))return false;
+  if(e.target.closest('button,input,select,textarea,#act-cluster,#hud-top,#dialog,#book,#debug-editor,#title'))return false;
+  const wrap=document.getElementById('wrap'),r=wrap.getBoundingClientRect();
+  const x=e.clientX-r.left,y=e.clientY-r.top;
+  return x<r.width*.55&&y>r.height*.58;
+}
+function bindVirtualStick(){
+  document.getElementById('dpad').classList.toggle('stick-hidden',STICK_ENABLED);
+  document.getElementById('controls').classList.toggle('stick-mode',STICK_ENABLED);
+  if(!STICK_ENABLED)return;
+  const wrap=document.getElementById('wrap'),stick=document.getElementById('virtual-stick');
+  wrap.addEventListener('contextmenu',e=>{
+    if(e.target.closest('#debug-editor input,#debug-editor textarea,#debug-editor select'))return;
+    e.preventDefault();
+  },{capture:true});
+  // Stick mode: left bottom movement, right bottom action. The stick never starts from UI controls.
+  wrap.addEventListener('pointerdown',e=>{
+    if(!canStartVirtualStick(e))return;
+    e.preventDefault();e.stopPropagation();
+    stickState.active=true;stickState.pointerId=e.pointerId;stickState.cx=e.clientX;stickState.cy=e.clientY;
+    stick.style.left=`${e.clientX-wrap.getBoundingClientRect().left}px`;
+    stick.style.top=`${e.clientY-wrap.getBoundingClientRect().top}px`;
+    stick.classList.add('is-active');wrap.setPointerCapture?.(e.pointerId);
+    updateVirtualStickDirection(0,0);
+  },{capture:true,passive:false});
+  wrap.addEventListener('pointermove',e=>{
+    if(!stickState.active||e.pointerId!==stickState.pointerId)return;
+    e.preventDefault();updateVirtualStickDirection(e.clientX-stickState.cx,e.clientY-stickState.cy);
+  },{passive:false});
+  for(const ev of ['pointerup','pointercancel','pointerleave','lostpointercapture']){
+    wrap.addEventListener(ev,e=>{
+      if(stickState.active&&e.pointerId===stickState.pointerId){e.preventDefault();resetVirtualStick();}
+    },{passive:false});
+  }
+}
+bindVirtualStick();
+document.getElementById('dbg-blocker-select').addEventListener('change',e=>{debugEditor.selected=Number(e.target.value)||0;updateDebugEditor();});
+document.getElementById('dbg-entity-select').addEventListener('change',e=>{debugEditor.entitySelected=Number(e.target.value)||0;updateDebugEditor();});
+for(const id of ['dbg-bx','dbg-by','dbg-bw','dbg-bh']){
+  document.getElementById(id).addEventListener('input',applyDebugEditorInputs);
+}
+document.getElementById('dbg-player-r').addEventListener('input',applyPlayerCollisionInput);
+for(const id of ['dbg-ex','dbg-ey','dbg-er']){
+  document.getElementById(id).addEventListener('input',applyEntityEditorInputs);
+}
+document.querySelectorAll('[data-dbg-step]').forEach(btn=>btn.addEventListener('pointerdown',e=>{
+  e.preventDefault();nudgeSelectedBlocker(Number(btn.dataset.dbgStep)||0);
+}));
+document.querySelectorAll('[data-dbg-size]').forEach(btn=>btn.addEventListener('pointerdown',e=>{
+  e.preventDefault();nudgeBlockerSize(btn.dataset.dbgSize,Number(btn.dataset.dbgSizeStep)||0);
+}));
+document.querySelectorAll('[data-dbg-player-step]').forEach(btn=>btn.addEventListener('pointerdown',e=>{
+  e.preventDefault();nudgePlayerCollision(Number(btn.dataset.dbgPlayerStep)||0);
+}));
+document.querySelectorAll('[data-dbg-entity-step]').forEach(btn=>btn.addEventListener('pointerdown',e=>{
+  e.preventDefault();nudgeSelectedEntity(Number(btn.dataset.dbgEntityStep)||0);
+}));
+document.getElementById('dbg-min').addEventListener('pointerdown',e=>{
+  e.preventDefault();debugEditor.minimized=!debugEditor.minimized;updateDebugEditor();
+});
+document.getElementById('dbg-add').addEventListener('pointerdown',e=>{e.preventDefault();addBlocker();});
+document.getElementById('dbg-dup').addEventListener('pointerdown',e=>{e.preventDefault();duplicateBlocker();});
+document.getElementById('dbg-del').addEventListener('pointerdown',e=>{e.preventDefault();deleteBlocker();});
+document.getElementById('dbg-round').addEventListener('pointerdown',e=>{e.preventDefault();roundBlockers();});
+document.getElementById('dbg-copy').addEventListener('pointerdown',async e=>{
+  e.preventDefault();
+  const out=document.getElementById('dbg-map-output'),status=document.getElementById('dbg-copy-status');
+  out.value=debugConfigText();out.select();
+  try{await navigator.clipboard.writeText(out.value);status.textContent='copied';}
+  catch(_){status.textContent='select text';}
+  setTimeout(()=>status.textContent='',1200);
+});
+function pointerToWorld(e){
+  const rect=cvs.getBoundingClientRect(),scaleX=VW/rect.width,scaleY=VH/rect.height;
+  const sx=(e.clientX-rect.left)*scaleX,screenY=(e.clientY-rect.top)*scaleY;
+  const maxCam=Math.max(0,WORLD_H-VH);
+  const camY=Math.max(0,Math.min((P.y-floorTop())*0.35,maxCam));
+  return {x:sx,y:screenY+camY};
+}
+cvs.addEventListener('pointerdown',e=>{
+  if(!game.debug)return;
+  const p=pointerToWorld(e),bs=MAPS[SCENE].blockers;
+  for(let i=bs.length-1;i>=0;i--){
+    const b=bs[i];
+    if(Math.abs(p.x-b.x)<=b.halfW&&Math.abs(p.y-b.y)<=b.halfH){
+      e.preventDefault();debugEditor.selected=i;debugEditor.dragging=true;
+      debugEditor.dragOffsetX=p.x-b.x;debugEditor.dragOffsetY=p.y-b.y;
+      cvs.setPointerCapture?.(e.pointerId);updateDebugEditor();return;
+    }
+  }
+});
+cvs.addEventListener('pointermove',e=>{
+  if(!game.debug||!debugEditor.dragging)return;
+  e.preventDefault();
+  const b=selectedBlocker(),p=pointerToWorld(e);if(!b)return;
+  b.x=Math.round(p.x-debugEditor.dragOffsetX);b.y=Math.round(p.y-debugEditor.dragOffsetY);
+  updateDebugEditor();
+});
+for(const ev of ['pointerup','pointercancel','lostpointercapture']){
+  cvs.addEventListener(ev,()=>{debugEditor.dragging=false;});
+}
+document.getElementById('act-main').addEventListener('pointerdown',e=>{e.preventDefault();doAction();});
+document.getElementById('dialog').addEventListener('pointerdown',e=>{e.preventDefault();if(dlg.active)advance();});
+document.getElementById('book-btn').addEventListener('pointerdown',e=>{e.preventDefault();
+  if(!document.getElementById('book').classList.contains('show'))openBook('cat');});
+document.getElementById('debug-btn').addEventListener('pointerdown',e=>{e.preventDefault();toggleDebug();});
+document.getElementById('book-close').addEventListener('pointerdown',e=>{e.preventDefault();
+  document.getElementById('book').classList.remove('show');});
+document.querySelectorAll('#book .tab').forEach(t=>t.addEventListener('pointerdown',e=>{e.preventDefault();renderBook(t.dataset.tab);}));
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowUp')held.up=true;if(e.key==='ArrowDown')held.down=true;
+  if(e.key==='ArrowLeft')held.left=true;if(e.key==='ArrowRight')held.right=true;
+  if(e.key.startsWith('Arrow'))syncDpadVisual();
+  if(e.key==='z'||e.key==='Z'||e.key==='Enter'||e.key===' '){e.preventDefault();doAction();}
+  if(e.key==='b'||e.key==='B'){const b=document.getElementById('book');
+    if(b.classList.contains('show'))b.classList.remove('show');else openBook('cat');}
+  if((e.key==='d'||e.key==='D')&&!e.repeat&&game.debugEnabled){toggleDebug();}
+});
+addEventListener('keyup',e=>{
+  if(e.key==='ArrowUp')held.up=false;if(e.key==='ArrowDown')held.down=false;
+  if(e.key==='ArrowLeft')held.left=false;if(e.key==='ArrowRight')held.right=false;
+  if(e.key.startsWith('Arrow'))syncDpadVisual();
+});
+document.getElementById('start-btn').addEventListener('pointerdown',e=>{
+  e.preventDefault();document.getElementById('title').classList.add('hide');game.started=true;
+});
+bindDebugSecretTap(document.getElementById('area-name'));
+bindDebugSecretTap(document.getElementById('title-name'));
+initDebugAccess();
+
+//============ 更新・描画ループ ============
+function updatePlayer(){
+  if(dlg.active||document.getElementById('book').classList.contains('show')){P.moving=false;return;}
+  let dx=0,dy=0;
+  if(held.up){dy=-1;P.dir='up';}else if(held.down){dy=1;P.dir='down';}
+  else if(held.left){dx=-1;P.dir='left';}else if(held.right){dx=1;P.dir='right';}
+  if(dx||dy){
+    let moved=false;
+    const nx=P.x+dx*P.speed,ny=P.y+dy*P.speed;
+    if(canWalk(nx,P.y,P.x,P.y)){P.x=nx;moved=true;}
+    if(canWalk(P.x,ny,P.x,P.y)){P.y=ny;moved=true;}
+    P.moving=moved;P.anim++;
+  }else P.moving=false;
+}
+function render(){
+  // カメラはごく僅かに追従（眺めを常にフレーム内へ）
+  const maxCam=Math.max(0,WORLD_H-VH);
+  let camY=(P.y-floorTop())*0.35; camY=Math.max(0,Math.min(camY,maxCam));
+  drawSceneBackground(SCENE,camY);
+
+  const list=[];
+  for(const e of ENTITIES){list.push({y:e.y,fn:()=>{
+    const sx=e.x,sy=e.y-camY;if(sy<-30||sy>VH+30)return;
+    if(e.type==='npc')drawNPC({id:e.id,spriteKey:e.spriteKey,...e.sprite},sx,sy);
+    else if(e.type==='cat')drawCat({id:e.id,...e.sprite},sx,sy);
+    else if(e.type==='exit'){const p=0.5+0.5*Math.sin(P.anim*0.1);
+      ctx.fillStyle=`rgba(217,169,58,${0.16+0.16*p})`;ctx.beginPath();ctx.ellipse(sx,sy,12,5,0,0,7);ctx.fill();}
+  }});}
+  list.push({y:P.y,fn:()=>drawPlayer(P.x,P.y-camY)});
+  list.sort((a,b)=>a.y-b.y);list.forEach(d=>d.fn());
+
+  if(game.nearest&&!dlg.active){
+    const e=game.nearest,sy=e.y-camY,p=0.5+0.5*Math.sin(P.anim*0.15);
+    const footY=sy+(e.type==='cat'?3:e.type==='npc'?7:e.type==='object'?4:0);
+    ctx.strokeStyle=`rgba(217,169,58,${0.28+0.32*p})`;ctx.lineWidth=1.3;
+    ctx.beginPath();ctx.ellipse(e.x,footY,7.5,2.8,0,0,7);ctx.stroke();
+    const my=footY-(e.type==='cat'?25:e.type==='npc'?30:e.type==='object'?22:18)-p*2;
+    R(e.x-1,my,2,4,'#d9a93a');R(e.x-1,my+5,2,2,'#d9a93a');
+  }
+  if(game.debugEnabled&&game.debug)drawDebug(camY);
+}
+function loop(){if(game.started){updatePlayer();updateNearest();}render();requestAnimationFrame(loop);}
+loadPlayerIdleSprite();
+loadPlayerSideWalkSprite();
+loadPlayerVerticalWalkSprites();
+loadNpcSprites();
+loadCatSprites();
+loadBackgroundImages();
+enterScene('sando',false);
+updateCatCount();loop();
+</script>
+</body>
+</html>
