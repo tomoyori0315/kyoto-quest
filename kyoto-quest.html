@@ -781,6 +781,29 @@ function stonePath(top,bot){
 }
 
 //============ シーン背景 ============
+function drawInariStation(camY){
+  const g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#c9d9d0');g.addColorStop(.45,'#d8d0b8');g.addColorStop(1,'#b9b0a0');
+  ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);
+  ctx.save();ctx.translate(0,-camY);
+  R(0,0,180,76,'#819a74');
+  trees(0,16,180,72,'#587c48','#72975c','#3d5f35');
+  R(18,48,144,54,'#d9c7a2');
+  R(22,44,136,8,'#8d4f35');
+  R(28,58,124,38,'#eee2c8');
+  R(34,66,36,20,'#7c5034');R(110,66,36,20,'#7c5034');
+  R(76,62,28,28,'#48515a');R(80,66,20,22,'#2d343a');
+  R(68,49,44,10,'#f4efe0');R(72,52,36,4,'#2e4238');
+  R(26,98,128,282,'#b8ad98');
+  stonePath(120,380);
+  R(42,128,96,46,'#c8bca2');
+  R(18,188,26,50,'#786f5d');R(21,191,20,44,'#efe3c2');
+  R(22,195,16,3,'#a83020');R(23,202,14,2,'#6a5a42');
+  R(137,178,18,54,'#7a5430');R(140,182,12,44,'#efe3c2');
+  R(0,260,32,120,'#8b806d');R(148,250,32,130,'#8b806d');
+  lantern(34,236);lantern(146,236);
+  ctx.restore();
+}
 function drawSando(camY){
   const g=ctx.createLinearGradient(0,0,0,VH);
   g.addColorStop(0,'#cfe0d8');g.addColorStop(.35,'#dfe6d2');g.addColorStop(1,'#cdbfa0');
@@ -1009,6 +1032,16 @@ function drawCatSprite(c,cfg,sx,sy){
 
 //============ エンティティ ============
 let ENTITIES=[];
+const INARI_STATION_ENTITIES=[
+  {id:'obj_station_guide',type:'object',x:32,y:214,r:22,name:'伏見稲荷の案内板',act:'しらべる',
+   lines:[{t:'駅前の案内板や。\n伏見稲荷大社は、ここから\n歩いてすぐのところにある。',
+     card:{title:'伏見稲荷大社',lead:'全国に広がる稲荷信仰の中心として親しまれる神社。',
+      body:'伏見稲荷大社は、稲荷大神をお祀りする神社です。商売繁昌、五穀豊穣、家内安全などを願う人々に、古くから親しまれてきました。',
+      tip:'境内は本殿の周辺だけでなく、稲荷山へと続く参道まで広がっています。'},spot:'fushimi_intro'}]},
+  {id:'exit_sando',type:'exit',x:90,y:165,r:24,name:'伏見稲荷へ向かう',act:'すすむ',to:'sando',
+   spawn:{x:90,y:330,dir:'up'}}
+];
+
 const SANDO_ENTITIES=[
   {id:'guide',type:'npc',x:102,y:306,r:18,
    sprite:{color:'#3a6ea5',color2:'#2a5a90',pants:'#2a3038'},name:'案内のおじさん',act:'はなす',
@@ -1051,7 +1084,9 @@ const SANDO_ENTITIES=[
       body:'伏見稲荷で見かける狐は、稲荷大神のお使いとされています。口にくわえているものには、稲穂、鍵、玉、巻物などがあり、それぞれに豊かさや知恵を感じさせる意味があります。',
       tip:'狐像をよく見ると、くわえているものが少しずつ違うことがあります。'},spot:'fox'}]},
   {id:'exit_romon',type:'exit',x:90,y:160,r:17,name:'楼門へ進む',act:'すすむ',to:'romon',
-   spawn:{x:90,y:330,dir:'up'}}
+   spawn:{x:90,y:330,dir:'up'}},
+  {id:'back_station',type:'exit',x:90,y:360,r:20,name:'JR稲荷駅前へ戻る',act:'もどる',to:'inari_station',
+   spawn:{x:90,y:200,dir:'down'}}
 ];
 
 const ROMON_ENTITIES=[
@@ -1101,6 +1136,26 @@ const SENBON_ENTITIES=[
 ];
 
 const MAPS={
+  inari_station:{
+    id:'inari_station',
+    areaLabel:'JR稲荷駅前',
+    quest:'伏見稲荷へ向かおう',
+    worldH:380,
+    spawn:{x:90,y:330,dir:'up'},
+    walkable:{left:30,right:150,top:150,bottom:374},
+    playerCollisionRadius:0,
+    blockers:[
+      {x:90,y:74,halfW:70,halfH:28},
+      {x:31,y:213,halfW:15,halfH:27},
+      {x:146,y:205,halfW:10,halfH:28},
+      {x:14,y:318,halfW:14,halfH:58},
+      {x:162,y:316,halfW:14,halfH:60}
+    ],
+    entities:INARI_STATION_ENTITIES,
+    backgroundType:'code',
+    backgroundImage:'assets/bg/inari-station.png',
+    draw:'drawInariStation'
+  },
   sando:{
     id:'sando',
     areaLabel:'伏見稲荷 大鳥居前',
@@ -1168,7 +1223,7 @@ const MAPS={
 };
 
 const BACKGROUND_IMAGES={};
-const BACKGROUND_DRAWERS={drawSando,drawRomon,drawSenbon};
+const BACKGROUND_DRAWERS={drawInariStation,drawSando,drawRomon,drawSenbon};
 function loadBackgroundImages(){
   for(const id in MAPS){
     const src=MAPS[id].backgroundImage;if(!src)continue;
@@ -1190,6 +1245,7 @@ function drawSceneBackground(sceneId,camY){
 }
 
 const SPOT_FULL={
+  fushimi_intro:{ico:'⛩️',title:'伏見稲荷大社',text:'全国に広がる稲荷信仰の中心として親しまれる神社。'},
   torii_manner:{ico:'⛩️',title:'鳥居のくぐり方',text:'端を通って軽く一礼。真ん中は神さまの通り道。'},
   senbei:{ico:'🍘',title:'稲荷せんべい',text:'狐の面の形に焼いた参道名物の瓦せんべい。'},
   big_torii:{ico:'⛩️',title:'大鳥居',text:'ここから伏見稲荷の参道がはじまる。'},
