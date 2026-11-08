@@ -392,7 +392,7 @@ if(window.visualViewport){
 
 // 歩けるエリアは画面とほぼ同じ高さに収める = 神社の眺めが常にフレーム内に入る
 // ワールド縦 360 / 画面 320 / カメラは僅かに追従(ほぼ固定)
-let SCENE='sando';
+let SCENE='inari_station';
 let WORLD_H=380;
 const FLOOR={top:196, bot:352};   // 参道の歩ける帯（鳥居の手前〜画面下）
 // シーンごとに歩ける縦範囲が異なる。本殿/千本鳥居は奥(上)まで歩けるようにする。
@@ -400,7 +400,7 @@ function floorTop(){ return MAPS[SCENE].walkable.top; }
 function floorBot(){ return MAPS[SCENE].walkable.bottom; }
 
 let P={x:90,y:300,dir:'up',moving:false,anim:0,speed:1.1};
-let game={started:false,cats:{},spots:{},visits:{},quest:'楼門にお参りしよう',nearest:null,debug:false,debugEnabled:false};
+let game={started:false,cats:{},spots:{},visits:{},quest:'伏見稲荷へ向かおう',nearest:null,debug:false,debugEnabled:false};
 let PLAYER_COLLISION_R=0;
 let debugEditor={selected:0,entitySelected:0,dragging:false,dragOffsetX:0,dragOffsetY:0,minimized:false};
 const DEBUG_STORAGE_KEY='kyotoQuestDebugEnabled';
@@ -781,6 +781,22 @@ function stonePath(top,bot){
 }
 
 //============ シーン背景 ============
+function drawInariStation(camY){
+  ctx.fillStyle='#d9c6a1';ctx.fillRect(0,0,VW,VH);
+  ctx.save();ctx.translate(0,-camY);
+  // PNG読込前・失敗時も、出口・案内板・駅舎を同じ位置に示す。
+  R(0,0,180,116,'#587c48');
+  R(46,42,88,8,'#a83020');R(56,50,8,72,'#c4402a');R(116,50,8,72,'#c4402a');
+  R(44,122,72,66,'#c8bca2');
+  R(0,190,180,48,'#8b806d');
+  for(let y=194;y<234;y+=9)R(70,y,40,5,'#eee2c8');
+  R(7,120,22,54,'#786f5d');R(10,124,16,40,'#efe3c2');
+  R(118,112,62,68,'#7a7868');R(112,138,14,30,'#786f5d');R(114,141,10,24,'#efe3c2');
+  R(118,258,62,96,'#8d4f35');R(122,266,54,80,'#d9c7a2');
+  R(126,276,44,12,'#eee2c8');R(132,282,32,3,'#2e4238');
+  R(136,300,28,46,'#48515a');
+  ctx.restore();
+}
 function drawSando(camY){
   const g=ctx.createLinearGradient(0,0,0,VH);
   g.addColorStop(0,'#cfe0d8');g.addColorStop(.35,'#dfe6d2');g.addColorStop(1,'#cdbfa0');
@@ -1009,6 +1025,16 @@ function drawCatSprite(c,cfg,sx,sy){
 
 //============ エンティティ ============
 let ENTITIES=[];
+const INARI_STATION_ENTITIES=[
+  {id:'obj_station_guide',type:'object',x:118,y:160,r:24,name:'伏見稲荷の案内板',act:'しらべる',
+   lines:[{t:'駅前の案内板や。\n伏見稲荷大社は、ここから\n歩いてすぐのところにある。',
+     card:{title:'伏見稲荷大社',lead:'全国に広がる稲荷信仰の中心として親しまれる神社。',
+      body:'伏見稲荷大社は、稲荷大神をお祀りする神社です。商売繁昌、五穀豊穣、家内安全などを願う人々に、古くから親しまれてきました。',
+      tip:'境内は本殿の周辺だけでなく、稲荷山へと続く参道まで広がっています。'},spot:'fushimi_intro'}]},
+  {id:'exit_sando',type:'exit',x:90,y:128,r:20,name:'伏見稲荷へ向かう',act:'すすむ',to:'sando',
+   spawn:{x:90,y:330,dir:'up'}}
+];
+
 const SANDO_ENTITIES=[
   {id:'guide',type:'npc',x:102,y:306,r:18,
    sprite:{color:'#3a6ea5',color2:'#2a5a90',pants:'#2a3038'},name:'案内のおじさん',act:'はなす',
@@ -1051,7 +1077,9 @@ const SANDO_ENTITIES=[
       body:'伏見稲荷で見かける狐は、稲荷大神のお使いとされています。口にくわえているものには、稲穂、鍵、玉、巻物などがあり、それぞれに豊かさや知恵を感じさせる意味があります。',
       tip:'狐像をよく見ると、くわえているものが少しずつ違うことがあります。'},spot:'fox'}]},
   {id:'exit_romon',type:'exit',x:90,y:160,r:17,name:'楼門へ進む',act:'すすむ',to:'romon',
-   spawn:{x:90,y:330,dir:'up'}}
+   spawn:{x:90,y:330,dir:'up'}},
+  {id:'back_station',type:'exit',x:90,y:360,r:20,name:'JR稲荷駅前へ戻る',act:'もどる',to:'inari_station',
+   spawn:{x:90,y:158,dir:'down'}}
 ];
 
 const ROMON_ENTITIES=[
@@ -1101,6 +1129,26 @@ const SENBON_ENTITIES=[
 ];
 
 const MAPS={
+  inari_station:{
+    id:'inari_station',
+    areaLabel:'JR稲荷駅前',
+    quest:'伏見稲荷へ向かおう',
+    worldH:380,
+    spawn:{x:90,y:330,dir:'up'},
+    walkable:{left:20,right:164,top:116,bottom:374},
+    playerCollisionRadius:0,
+    blockers:[
+      // 背景PNG上の案内板・狐像の台座・駅舎（足元アンカー基準）。
+      {x:18,y:147,halfW:11,halfH:27},
+      {x:149,y:146,halfW:31,halfH:34},
+      {x:149,y:306,halfW:31,halfH:48},
+      {x:9,y:338,halfW:9,halfH:36}
+    ],
+    entities:INARI_STATION_ENTITIES,
+    backgroundType:'code',
+    backgroundImage:'assets/bg/inari-station.png',
+    draw:'drawInariStation'
+  },
   sando:{
     id:'sando',
     areaLabel:'伏見稲荷 大鳥居前',
@@ -1168,7 +1216,7 @@ const MAPS={
 };
 
 const BACKGROUND_IMAGES={};
-const BACKGROUND_DRAWERS={drawSando,drawRomon,drawSenbon};
+const BACKGROUND_DRAWERS={drawInariStation,drawSando,drawRomon,drawSenbon};
 function loadBackgroundImages(){
   for(const id in MAPS){
     const src=MAPS[id].backgroundImage;if(!src)continue;
@@ -1190,6 +1238,7 @@ function drawSceneBackground(sceneId,camY){
 }
 
 const SPOT_FULL={
+  fushimi_intro:{ico:'⛩️',title:'伏見稲荷大社',text:'全国に広がる稲荷信仰の中心として親しまれる神社。'},
   torii_manner:{ico:'⛩️',title:'鳥居のくぐり方',text:'端を通って軽く一礼。真ん中は神さまの通り道。'},
   senbei:{ico:'🍘',title:'稲荷せんべい',text:'狐の面の形に焼いた参道名物の瓦せんべい。'},
   big_torii:{ico:'⛩️',title:'大鳥居',text:'ここから伏見稲荷の参道がはじまる。'},
@@ -1909,7 +1958,7 @@ loadPlayerVerticalWalkSprites();
 loadNpcSprites();
 loadCatSprites();
 loadBackgroundImages();
-enterScene('sando',false);
+enterScene('inari_station',false);
 updateCatCount();loop();
 </script>
 </body>

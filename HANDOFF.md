@@ -18,8 +18,9 @@ MVP途中の古い前提は `HANDOFF_MVP_ARCHIVE.md` に退避しています。
 
 ## 現在の完成状態
 
-既存ステージは3つです。
+既存ステージは4つです。ゲームはJR稲荷駅前から開始します。
 
+- `inari_station`: JR稲荷駅前（開始地点）
 - `sando`: 伏見稲荷 大鳥居前
 - `romon`: 伏見稲荷 楼門・本殿前
 - `senbon`: 伏見稲荷 千本鳥居
@@ -34,7 +35,8 @@ MVP途中の古い前提は `HANDOFF_MVP_ARCHIVE.md` に退避しています。
 - 猫をなでる、猫帳登録、猫closeup表示、猫帳アイコン表示
 - objectを調べる見聞カード
 - 帳面の猫帳、見聞メモ、参拝記録
-- sando / romon / senbon のステージ遷移
+- inari_station / sando / romon / senbon のステージ遷移
+- 駅前の案内板を調べて見聞メモへ記録
 - 背景PNG、主人公/NPC/猫/UIの別レイヤー描画
 - NPC / 猫の足元矩形ブロッカー
 - iOS Safari / Chrome向けの長押しルーペ、選択、タップハイライト抑制
@@ -82,6 +84,7 @@ MVP途中の古い前提は `HANDOFF_MVP_ARCHIVE.md` に退避しています。
 - `MAPS[sceneId].blockers`
 - `MAPS[sceneId].playerCollisionRadius`
 - `MAPS[sceneId].entities`
+- `INARI_STATION_ENTITIES`
 - `SANDO_ENTITIES`
 - `ROMON_ENTITIES`
 - `SENBON_ENTITIES`
@@ -117,7 +120,6 @@ objectを調べると、短い見聞カードが表示されます。
 
 今後は、本編ステージを以下の方向で追加していきます。
 
-- JR稲荷駅前
 - 奥社奉拝所・おもかる石
 - 山道
 - 四ツ辻
@@ -139,3 +141,11 @@ objectを調べると、短い見聞カードが表示されます。
 - `kyoto-quest.html` を変えたら、必ず `index.html` へ同じ内容を反映してください。
 - ドキュメントだけの作業では、ゲーム本体に不要な差分を出さないでください。
 - 確認時は `git diff --check` を通してください。
+
+## Step AUTO-07：駅前追加の確認
+
+- 駅前→参道は鳥居側の光る出口で「すすむ」。
+- 参道→駅前は手前の出口で「もどる」。戻った直後は出口から離れた位置へ出現する。
+- 駅前の右奥の案内板を調べ、会話を閉じると見聞メモに記録される。
+- 駅舎と案内板・狐像台座へは侵入できない。既存3ステージの配置は変更していない。
+- 通常・D-pad・DBGで、駅前の移動、案内板、参道との往復を確認する。
